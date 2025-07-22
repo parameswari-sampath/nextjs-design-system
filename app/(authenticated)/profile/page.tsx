@@ -21,6 +21,12 @@ export default function ProfilePage() {
     name: '',
     email: ''
   });
+  const [passwordData, setPasswordData] = useState({
+    current_password: '',
+    new_password: '',
+    new_password_confirm: ''
+  });
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   const fetchUserProfile = async () => {
     try {
@@ -76,6 +82,14 @@ export default function ProfilePage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
       ...prev,
       [name]: value
     }));
@@ -158,6 +172,83 @@ export default function ProfilePage() {
       email: user?.email || ''
     });
     setIsEditing(false);
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!passwordData.current_password || !passwordData.new_password || !passwordData.new_password_confirm) {
+      showToast('destructive', 'Please fill in all password fields');
+      return;
+    }
+
+    if (passwordData.new_password !== passwordData.new_password_confirm) {
+      showToast('destructive', 'New passwords do not match');
+      return;
+    }
+
+    if (passwordData.new_password.length < 8) {
+      showToast('destructive', 'New password must be at least 8 characters long');
+      return;
+    }
+
+    setIsSavingPassword(true);
+
+    try {
+      const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/password/change/`, {
+        method: 'POST',
+        body: JSON.stringify({
+          current_password: passwordData.current_password,
+          new_password: passwordData.new_password,
+          new_password_confirm: passwordData.new_password_confirm
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        showToast('success', result.message || 'Password changed successfully!');
+        
+        // Clear password form
+        setPasswordData({
+          current_password: '',
+          new_password: '',
+          new_password_confirm: ''
+        });
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to change password:', errorData);
+        
+        if (errorData.error && errorData.error.details) {
+          const errors = errorData.error.details;
+          let errorMessage = 'Password change failed:\n';
+          
+          if (errors.current_password) {
+            errorMessage += `Current Password: ${errors.current_password.join(', ')}\n`;
+          }
+          if (errors.new_password) {
+            errorMessage += `New Password: ${errors.new_password.join(', ')}\n`;
+          }
+          if (errors.new_password_confirm) {
+            errorMessage += `Password Confirmation: ${errors.new_password_confirm.join(', ')}\n`;
+          }
+          
+          showToast('destructive', errorMessage.trim());
+        } else {
+          showToast('destructive', 'Failed to change password. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      showToast('destructive', 'Failed to change password. Please check your connection and try again.');
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
+  const handlePasswordCancel = () => {
+    setPasswordData({
+      current_password: '',
+      new_password: '',
+      new_password_confirm: ''
+    });
   };
 
   const renderProfileSkeleton = () => (
@@ -259,7 +350,7 @@ export default function ProfilePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Information */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -311,6 +402,57 @@ export default function ProfilePage() {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Password Change Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Current Password</label>
+                <Input
+                  name="current_password"
+                  type="password"
+                  value={passwordData.current_password}
+                  onChange={handlePasswordChange}
+                  placeholder="Enter your current password"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">New Password</label>
+                  <Input
+                    name="new_password"
+                    type="password"
+                    value={passwordData.new_password}
+                    onChange={handlePasswordChange}
+                    placeholder="Enter new password (min 8 chars)"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Confirm New Password</label>
+                  <Input
+                    name="new_password_confirm"
+                    type="password"
+                    value={passwordData.new_password_confirm}
+                    onChange={handlePasswordChange}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <Button variant="primary" onClick={handlePasswordSubmit} disabled={isSavingPassword}>
+                  {isSavingPassword ? 'Changing...' : 'Change Password'}
+                </Button>
+                <Button variant="outline" onClick={handlePasswordCancel} disabled={isSavingPassword}>
+                  Cancel
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -372,7 +514,7 @@ export default function ProfilePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Information */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -424,6 +566,57 @@ export default function ProfilePage() {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Password Change Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Current Password</label>
+                <Input
+                  name="current_password"
+                  type="password"
+                  value={passwordData.current_password}
+                  onChange={handlePasswordChange}
+                  placeholder="Enter your current password"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">New Password</label>
+                  <Input
+                    name="new_password"
+                    type="password"
+                    value={passwordData.new_password}
+                    onChange={handlePasswordChange}
+                    placeholder="Enter new password (min 8 chars)"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Confirm New Password</label>
+                  <Input
+                    name="new_password_confirm"
+                    type="password"
+                    value={passwordData.new_password_confirm}
+                    onChange={handlePasswordChange}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <Button variant="primary" onClick={handlePasswordSubmit} disabled={isSavingPassword}>
+                  {isSavingPassword ? 'Changing...' : 'Change Password'}
+                </Button>
+                <Button variant="outline" onClick={handlePasswordCancel} disabled={isSavingPassword}>
+                  Cancel
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -600,6 +600,119 @@ paths:
                             type: string
                             example: "Token is invalid or expired"
 
+  /api/auth/password/change/:
+    post:
+      summary: Change user password
+      description: Change the current user's password with current password verification
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - new_password
+                - new_password_confirm
+              properties:
+                current_password:
+                  type: string
+                  example: "currentPassword123"
+                  description: "User's current password for verification"
+                new_password:
+                  type: string
+                  minLength: 8
+                  example: "newStrongPassword123"
+                  description: "New password (minimum 8 characters)"
+                new_password_confirm:
+                  type: string
+                  example: "newStrongPassword123"
+                  description: "New password confirmation (must match new_password)"
+
+      responses:
+        200:
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password changed successfully"
+
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                password_mismatch:
+                  summary: Password confirmation mismatch
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Invalid input data"
+                      details:
+                        new_password_confirm: ["Password fields didn't match."]
+                
+                weak_password:
+                  summary: New password is too weak
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Invalid input data"
+                      details:
+                        new_password: ["This password is too common."]
+                
+                missing_fields:
+                  summary: Missing required fields
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Invalid input data"
+                      details:
+                        current_password: ["This field is required."]
+                        new_password: ["This field is required."]
+                        new_password_confirm: ["This field is required."]
+                
+                incorrect_current_password:
+                  summary: Current password is incorrect
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Invalid input data"
+                      details:
+                        current_password: ["Current password is incorrect."]
+
+        401:
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "AUTHENTICATION_ERROR"
+                      message:
+                        type: string
+                        example: "Authentication required"
+                      details:
+                        type: object
+                        properties:
+                          detail:
+                            type: string
+                            example: "Authentication credentials were not provided."
+
 components:
   securitySchemes:
     bearerAuth:
