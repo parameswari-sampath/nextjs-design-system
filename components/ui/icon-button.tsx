@@ -1,7 +1,7 @@
 import React from "react";
 import clsx from "clsx";
 
-type ButtonProps = {
+type IconButtonProps = {
   children: React.ReactNode;
   variant?:
     | "primary"
@@ -12,22 +12,32 @@ type ButtonProps = {
     | "warning"
     | "outline"
     | "ghost";
+  size?: "sm" | "md" | "lg";
   className?: string;
   onClick?: () => void;
   type?: "button" | "submit" | "reset";
   disabled?: boolean;
+  "aria-label": string; // Required for accessibility
 };
 
-const Button: React.FC<ButtonProps> = ({
+const IconButton: React.FC<IconButtonProps> = ({
   children,
-  variant = "primary",
+  variant = "ghost",
+  size = "md",
   className,
   onClick,
   type = "button",
   disabled = false,
+  "aria-label": ariaLabel,
 }) => {
   const base =
-    "inline-flex items-center justify-center px-3 py-1.5 rounded-[var(--radius)] text-sm font-medium transition-colors focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center rounded-[var(--radius)] font-medium transition-colors focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+
+  const sizes: Record<string, string> = {
+    sm: "h-8 w-8 p-1",
+    md: "h-10 w-10 p-2",
+    lg: "h-12 w-12 p-3",
+  };
 
   const variants: Record<string, string> = {
     primary:
@@ -53,11 +63,12 @@ const Button: React.FC<ButtonProps> = ({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={clsx(base, variants[variant], className)}
+      aria-label={ariaLabel}
+      className={clsx(base, sizes[size], variants[variant], className)}
     >
       {children}
     </button>
   );
 };
 
-export default Button;
+export default IconButton;

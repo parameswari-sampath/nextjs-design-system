@@ -1,0 +1,234 @@
+---
+design_system:
+  name: "Next.js Design System"
+  version: "1.0.0"
+  description: "A comprehensive React design system built with TypeScript, Tailwind CSS v4, and custom CSS variables"
+  
+components:
+  Button:
+    description: "Interactive button component with multiple variants, sizes, and states"
+    file_path: "components/ui/button.tsx"
+    
+    props:
+      variant:
+        type: "string"
+        default: "primary"
+        required: false
+        options:
+          - primary
+          - secondary
+          - destructive
+          - outline
+          - ghost
+        description: "Visual style variant of the button"
+        
+      size:
+        type: "string" 
+        default: "md"
+        required: false
+        options:
+          - sm
+          - md
+          - lg
+        description: "Size of the button affecting padding and text size"
+        
+      disabled:
+        type: "boolean"
+        default: false
+        required: false
+        description: "Whether the button is disabled"
+        
+      className:
+        type: "string"
+        default: ""
+        required: false
+        description: "Additional CSS classes to apply"
+        
+      children:
+        type: "ReactNode"
+        required: true
+        description: "Content to display inside the button"
+        
+    extends:
+      - "React.ButtonHTMLAttributes<HTMLButtonElement>"
+      
+    examples:
+      basic:
+        code: |
+          <Button>Click me</Button>
+        description: "Basic button with default primary variant"
+        
+      variants:
+        code: |
+          <Button variant="primary">Primary</Button>
+          <Button variant="secondary">Secondary</Button>
+          <Button variant="destructive">Destructive</Button>
+          <Button variant="outline">Outline</Button>
+          <Button variant="ghost">Ghost</Button>
+        description: "Different button variants"
+        
+      sizes:
+        code: |
+          <Button size="sm">Small</Button>
+          <Button size="md">Medium</Button>
+          <Button size="lg">Large</Button>
+        description: "Different button sizes"
+        
+      disabled:
+        code: |
+          <Button disabled>Disabled Button</Button>
+        description: "Disabled button state"
+        
+    styling:
+      css_variables:
+        - "--color-primary: Primary button background color"
+        - "--color-primary-hover: Primary button hover color"
+        - "--color-secondary: Secondary button background color"
+        - "--color-destructive: Destructive button background color"
+        - "--color-border: Button border color"
+        - "--radius: Button border radius"
+        
+      classes:
+        base: "inline-flex items-center justify-center gap-2 font-medium rounded-[var(--radius)] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+        primary: "bg-[var(--color-primary)] text-white border border-[var(--color-primary)] hover:bg-[var(--color-primary)]/90"
+        secondary: "bg-[var(--color-secondary)] text-[var(--color-secondary-foreground)] border border-[var(--color-border)] hover:bg-[var(--color-secondary)]/80"
+        destructive: "bg-[var(--color-destructive)] text-white border border-[var(--color-destructive)] hover:bg-[var(--color-destructive)]/90"
+        outline: "border border-[var(--color-border)] bg-transparent hover:bg-[var(--color-secondary)] hover:text-[var(--color-secondary-foreground)]"
+        ghost: "hover:bg-[var(--color-secondary)] hover:text-[var(--color-secondary-foreground)]"
+        
+    accessibility:
+      - "Supports keyboard navigation (Enter and Space keys)"
+      - "Proper focus ring styling"
+      - "Disabled state prevents interaction"
+      - "Semantic button element"
+      - "ARIA attributes inherited from native button"
+
+  Input:
+    description: "Text input component with validation states and error handling"
+    file_path: "components/ui/input.tsx"
+    
+    props:
+      type:
+        type: "string"
+        default: "text"
+        required: false
+        options:
+          - text
+          - email
+          - password
+          - number
+          - tel
+          - url
+          - search
+        description: "HTML input type"
+        
+      placeholder:
+        type: "string"
+        required: false
+        description: "Placeholder text shown when input is empty"
+        
+      value:
+        type: "string"
+        required: false
+        description: "Controlled input value"
+        
+      defaultValue:
+        type: "string" 
+        required: false
+        description: "Default value for uncontrolled input"
+        
+      error:
+        type: "boolean"
+        default: false
+        required: false
+        description: "Whether the input is in an error state"
+        
+      errorMessage:
+        type: "string"
+        required: false
+        description: "Error message to display when error is true"
+        
+      disabled:
+        type: "boolean"
+        default: false
+        required: false
+        description: "Whether the input is disabled"
+        
+      required:
+        type: "boolean"
+        default: false
+        required: false
+        description: "Whether the input is required"
+        
+      className:
+        type: "string"
+        default: ""
+        required: false
+        description: "Additional CSS classes to apply"
+        
+    extends:
+      - "React.InputHTMLAttributes<HTMLInputElement>"
+      
+    examples:
+      basic:
+        code: |
+          <Input placeholder="Enter your name" />
+        description: "Basic input with placeholder"
+        
+      controlled:
+        code: |
+          const [value, setValue] = useState("");
+          <Input 
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Controlled input"
+          />
+        description: "Controlled input with state"
+        
+      types:
+        code: |
+          <Input type="email" placeholder="email@example.com" />
+          <Input type="password" placeholder="Password" />
+          <Input type="number" placeholder="Enter number" />
+        description: "Different input types"
+        
+      error_state:
+        code: |
+          <Input 
+            error={true}
+            errorMessage="This field is required"
+            placeholder="Required field"
+          />
+        description: "Input with error state and message"
+        
+      disabled:
+        code: |
+          <Input disabled placeholder="Disabled input" />
+        description: "Disabled input state"
+        
+    styling:
+      css_variables:
+        - "--color-input: Input background color"
+        - "--color-border: Input border color"
+        - "--color-primary: Focus ring color"
+        - "--color-destructive: Error state color"
+        - "--color-muted-foreground: Placeholder text color"
+        - "--radius: Input border radius"
+        
+      classes:
+        base: "flex h-10 w-full rounded-[var(--radius)] border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        normal: "border-[var(--color-border)] bg-[var(--color-input)] focus-visible:ring-[var(--color-primary)]"
+        error: "border-[var(--color-destructive)] focus-visible:ring-[var(--color-destructive)]"
+        
+    validation:
+      - "Supports HTML5 validation attributes (required, pattern, min, max, etc.)"
+      - "Visual error states with red border and focus ring"
+      - "Error message display below input"
+      - "ARIA attributes for accessibility (aria-invalid, aria-describedby)"
+      
+    accessibility:
+      - "Proper label association (use with <label> element)"
+      - "Error states announced to screen readers"
+      - "Keyboard navigation support"
+      - "Focus management and visible focus indicators"
+      - "Placeholder text does not replace proper labeling"

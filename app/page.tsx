@@ -3,6 +3,7 @@
 import Select from "@/components/ui/select";
 import Input from "@/components/ui/input";
 import Button from "@/components/ui/button";
+import IconButton from "@/components/ui/icon-button";
 import Checkbox from "@/components/ui/checkbox";
 import Textarea from "@/components/ui/textarea";
 import Toggle from "@/components/ui/toggle";
@@ -22,7 +23,9 @@ import Modal, { ModalHeader, ModalTitle, ModalDescription, ModalBody, ModalFoote
 import Dropdown, { DropdownTrigger, DropdownContent, DropdownItem, DropdownSeparator, DropdownLabel } from "@/components/ui/dropdown";
 import Spinner, { LoadingButton } from "@/components/ui/spinner";
 import FileUpload from "@/components/ui/file-upload";
+import Pagination, { PaginationInfo, ItemsPerPage } from "@/components/ui/pagination";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function Page() {
   const [formData, setFormData] = useState({
@@ -66,6 +69,36 @@ export default function Page() {
     button: [],
     minimal: []
   });
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  
+  // Sample data for paginated table
+  const allUsers = [
+    { id: 1, name: "John Doe", email: "john.doe@example.com", role: "Admin", status: "Active", joinDate: "2024-01-15", projects: 12 },
+    { id: 2, name: "Alice Smith", email: "alice.smith@example.com", role: "Developer", status: "Active", joinDate: "2024-01-18", projects: 8 },
+    { id: 3, name: "Bob Johnson", email: "bob.johnson@example.com", role: "Designer", status: "Pending", joinDate: "2024-01-20", projects: 5 },
+    { id: 4, name: "Carol Williams", email: "carol.williams@example.com", role: "Manager", status: "Inactive", joinDate: "2024-01-22", projects: 15 },
+    { id: 5, name: "David Brown", email: "david.brown@example.com", role: "Developer", status: "Active", joinDate: "2024-01-25", projects: 11 },
+    { id: 6, name: "Emma Wilson", email: "emma.wilson@example.com", role: "QA Engineer", status: "Active", joinDate: "2024-01-28", projects: 7 },
+    { id: 7, name: "Frank Davis", email: "frank.davis@example.com", role: "Developer", status: "Active", joinDate: "2024-02-01", projects: 9 },
+    { id: 8, name: "Grace Miller", email: "grace.miller@example.com", role: "Designer", status: "Pending", joinDate: "2024-02-03", projects: 6 },
+    { id: 9, name: "Henry Taylor", email: "henry.taylor@example.com", role: "Manager", status: "Active", joinDate: "2024-02-05", projects: 13 },
+    { id: 10, name: "Ivy Anderson", email: "ivy.anderson@example.com", role: "Admin", status: "Active", joinDate: "2024-02-08", projects: 10 },
+    { id: 11, name: "Jack Thompson", email: "jack.thompson@example.com", role: "Developer", status: "Inactive", joinDate: "2024-02-10", projects: 4 },
+    { id: 12, name: "Karen White", email: "karen.white@example.com", role: "QA Engineer", status: "Active", joinDate: "2024-02-12", projects: 8 },
+    { id: 13, name: "Liam Clark", email: "liam.clark@example.com", role: "Designer", status: "Active", joinDate: "2024-02-15", projects: 7 },
+    { id: 14, name: "Maya Rodriguez", email: "maya.rodriguez@example.com", role: "Manager", status: "Active", joinDate: "2024-02-18", projects: 16 },
+    { id: 15, name: "Nathan Lee", email: "nathan.lee@example.com", role: "Developer", status: "Pending", joinDate: "2024-02-20", projects: 5 },
+    { id: 16, name: "Olivia Martinez", email: "olivia.martinez@example.com", role: "Admin", status: "Active", joinDate: "2024-02-22", projects: 14 },
+    { id: 17, name: "Peter Garcia", email: "peter.garcia@example.com", role: "QA Engineer", status: "Active", joinDate: "2024-02-25", projects: 9 },
+    { id: 18, name: "Quinn Johnson", email: "quinn.johnson@example.com", role: "Designer", status: "Inactive", joinDate: "2024-02-28", projects: 3 },
+    { id: 19, name: "Rachel Green", email: "rachel.green@example.com", role: "Developer", status: "Active", joinDate: "2024-03-01", projects: 11 },
+    { id: 20, name: "Steve Brown", email: "steve.brown@example.com", role: "Manager", status: "Active", joinDate: "2024-03-05", projects: 18 }
+  ];
   
   const [errors, setErrors] = useState({
     name: false,
@@ -165,10 +198,116 @@ export default function Page() {
     setUploadedFiles(prev => ({ ...prev, [key]: files }));
     showToast("success", `${files.length} file(s) selected`);
   };
+  
+  // Pagination functions
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    showToast("info", `Navigated to page ${page}`);
+  };
+  
+  const handleItemsPerPageChange = (items: number) => {
+    setItemsPerPage(items);
+    setCurrentPage(1); // Reset to first page when changing items per page
+    showToast("info", `Showing ${items} items per page`);
+  };
+  
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setCurrentPage(1); // Reset to first page when sorting
+    showToast("info", `Sorted by ${field}`);
+  };
+  
+  // Sort data
+  const sortedUsers = [...allUsers].sort((a, b) => {
+    if (!sortField) return 0;
+    
+    const aValue = a[sortField as keyof typeof a];
+    const bValue = b[sortField as keyof typeof b];
+    
+    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+  
+  // Calculate pagination
+  const totalItems = sortedUsers.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = sortedUsers.slice(startIndex, endIndex);
+  
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "Active":
+        return <Badge variant="success">Active</Badge>;
+      case "Pending":
+        return <Badge variant="warning">Pending</Badge>;
+      case "Inactive":
+        return <Badge variant="destructive">Inactive</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+  
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return (
+        <svg className="h-3 w-3 text-[var(--color-muted-foreground)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+        </svg>
+      );
+    }
+    
+    return sortDirection === "asc" ? (
+      <svg className="h-3 w-3 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    ) : (
+      <svg className="h-3 w-3 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    );
+  };
 
   return (
-    <div className="p-6 w-full space-y-6">
-      <h1 className="text-2xl font-bold mb-6">Design System Components</h1>
+    <div className="min-h-screen bg-[var(--background)]">
+      {/* Navigation Header */}
+      <div className="border-b border-[var(--color-border)] bg-[var(--color-card)] sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-bold text-[var(--foreground)]">Design System</h1>
+              <Separator orientation="vertical" className="h-6" />
+              <Badge variant="primary">Components</Badge>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link href="/layouts">
+                <Button variant="ghost" size="sm">
+                  Layouts
+                </Button>
+              </Link>
+              <Link href="/sidebar">
+                <Button variant="outline" size="sm">
+                  Sidebars →
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-[var(--foreground)] mb-2">Components</h2>
+          <p className="text-[var(--color-muted-foreground)] text-lg">
+            Interactive components for building user interfaces
+          </p>
+        </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Button Components */}
@@ -184,6 +323,61 @@ export default function Page() {
                 <Button variant="destructive">Destructive</Button>
                 <Button variant="outline">Outline</Button>
                 <Button variant="ghost">Ghost</Button>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h3 className="text-sm font-medium mb-2 text-[var(--color-muted-foreground)]">Icon Button Variants</h3>
+              <div className="flex flex-wrap gap-2">
+                <IconButton variant="primary" aria-label="Heart">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </IconButton>
+                <IconButton variant="secondary" aria-label="Settings">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </IconButton>
+                <IconButton variant="destructive" aria-label="Delete">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </IconButton>
+                <IconButton variant="outline" aria-label="Edit">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </IconButton>
+                <IconButton variant="ghost" aria-label="More">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                  </svg>
+                </IconButton>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-sm font-medium mb-2 text-[var(--color-muted-foreground)]">Icon Button Sizes</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <IconButton variant="outline" size="sm" aria-label="Small plus">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </IconButton>
+                <IconButton variant="outline" size="md" aria-label="Medium plus">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </IconButton>
+                <IconButton variant="outline" size="lg" aria-label="Large plus">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </IconButton>
               </div>
             </div>
             
@@ -1608,6 +1802,189 @@ export default function Page() {
                 </Table>
               </div>
             </div>
+            
+            <div className="mt-8">
+              <span className="text-sm font-medium text-[var(--color-muted-foreground)] mb-4 block">Paginated User Management Table:</span>
+              
+              <div className="space-y-4">
+                {/* Table Controls */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <PaginationInfo 
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={itemsPerPage}
+                  />
+                  <div className="flex items-center gap-4">
+                    <ItemsPerPage
+                      value={itemsPerPage}
+                      options={[5, 10, 20, 50]}
+                      onValueChange={handleItemsPerPageChange}
+                    />
+                  </div>
+                </div>
+                
+                {/* Sortable Table with Fixed Layout */}
+                <Table className="table-fixed">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-[var(--color-secondary)]/50 select-none w-[180px]"
+                        onClick={() => handleSort('name')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Name
+                          {getSortIcon('name')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-[var(--color-secondary)]/50 select-none w-[220px]"
+                        onClick={() => handleSort('email')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Email
+                          {getSortIcon('email')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-[var(--color-secondary)]/50 select-none w-[120px]"
+                        onClick={() => handleSort('role')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Role
+                          {getSortIcon('role')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-[var(--color-secondary)]/50 select-none w-[100px]"
+                        onClick={() => handleSort('status')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Status
+                          {getSortIcon('status')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-[var(--color-secondary)]/50 select-none w-[110px]"
+                        onClick={() => handleSort('joinDate')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Join Date
+                          {getSortIcon('joinDate')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-[var(--color-secondary)]/50 select-none text-right w-[90px]"
+                        onClick={() => handleSort('projects')}
+                      >
+                        <div className="flex items-center gap-2 justify-end">
+                          Projects
+                          {getSortIcon('projects')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-right w-[140px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium w-[180px] truncate">{user.name}</TableCell>
+                        <TableCell className="text-[var(--color-muted-foreground)] w-[220px] truncate" title={user.email}>{user.email}</TableCell>
+                        <TableCell className="w-[120px] truncate">{user.role}</TableCell>
+                        <TableCell className="w-[100px]">{getStatusBadge(user.status)}</TableCell>
+                        <TableCell className="text-[var(--color-muted-foreground)] w-[110px]">{user.joinDate}</TableCell>
+                        <TableCell className="font-mono text-right w-[90px]">{user.projects}</TableCell>
+                        <TableCell className="text-right w-[140px]">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => showToast("info", `Viewing ${user.name}`)}>View</Button>
+                            <Button variant="ghost" size="sm" onClick={() => showToast("info", `Editing ${user.name}`)}>Edit</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableCaption>
+                    Showing {paginatedUsers.length} of {totalItems} users
+                  </TableCaption>
+                </Table>
+                
+                {/* Pagination Controls */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4">
+                  <div className="text-sm text-[var(--color-muted-foreground)]">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <Pagination 
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    maxVisiblePages={5}
+                    size="md"
+                  />
+                </div>
+                
+                {/* Additional Pagination Examples */}
+                <div className="mt-8 space-y-6">
+                  <div>
+                    <span className="text-sm font-medium text-[var(--color-muted-foreground)] mb-3 block">Different Pagination Sizes:</span>
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-xs text-[var(--color-muted-foreground)] mb-2 block">Small:</span>
+                        <Pagination 
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          onPageChange={handlePageChange}
+                          size="sm"
+                          maxVisiblePages={3}
+                          showFirstLast={false}
+                        />
+                      </div>
+                      <div>
+                        <span className="text-xs text-[var(--color-muted-foreground)] mb-2 block">Medium:</span>
+                        <Pagination 
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          onPageChange={handlePageChange}
+                          size="md"
+                          maxVisiblePages={5}
+                        />
+                      </div>
+                      <div>
+                        <span className="text-xs text-[var(--color-muted-foreground)] mb-2 block">Large:</span>
+                        <Pagination 
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          onPageChange={handlePageChange}
+                          size="lg"
+                          maxVisiblePages={7}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm font-medium text-[var(--color-muted-foreground)] mb-3 block">Minimal Pagination (no first/last):</span>
+                    <Pagination 
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                      showFirstLast={false}
+                      maxVisiblePages={5}
+                    />
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm font-medium text-[var(--color-muted-foreground)] mb-3 block">Simple Pagination (prev/next only):</span>
+                    <Pagination 
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                      showFirstLast={false}
+                      maxVisiblePages={1}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1635,6 +2012,7 @@ export default function Page() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
