@@ -10,6 +10,124 @@ servers:
     description: Development server
 
 paths:
+  /api/auth/login/:
+    post:
+      summary: Login user and get JWT tokens
+      description: Authenticate user with email and password, returns JWT access and refresh tokens
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "testuser@example.com"
+                  description: "User's email address"
+                password:
+                  type: string
+                  example: "testPassword123"
+                  description: "User's password"
+
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIi..."
+                    description: "JWT access token"
+                  refresh:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCI..."
+                    description: "JWT refresh token"
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        example: "1a9f1162-b28c-4261-b8c6-3d48749f1a79"
+                      email:
+                        type: string
+                        format: email
+                        example: "testuser@example.com"
+                      name:
+                        type: string
+                        example: "Test User"
+                      role:
+                        type: string
+                        example: "STUDENT"
+
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                empty_email:
+                  summary: Empty email field
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Invalid input data"
+                      details:
+                        email: ["This field may not be blank."]
+                
+                missing_fields:
+                  summary: Missing required fields
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Invalid input data"
+                      details:
+                        email: ["This field is required."]
+                        password: ["This field is required."]
+
+        401:
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "AUTHENTICATION_ERROR"
+                      message:
+                        type: string
+                        example: "Authentication required"
+                      details:
+                        type: object
+                        properties:
+                          detail:
+                            type: string
+                            example: "No active account found with the given credentials"
+              examples:
+                invalid_credentials:
+                  summary: Invalid email or password
+                  value:
+                    error:
+                      code: "AUTHENTICATION_ERROR"
+                      message: "Authentication required"
+                      details:
+                        detail: "No active account found with the given credentials"
+
   /api/auth/register/:
     post:
       summary: Register a new user account
