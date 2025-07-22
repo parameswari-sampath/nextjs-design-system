@@ -430,6 +430,120 @@ paths:
                             type: string
                             example: "Authentication credentials were not provided."
 
+  /api/auth/profile/update/:
+    put:
+      summary: Update current user profile
+      description: Update the profile information of the currently authenticated user
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "John Smith"
+                  description: "User's full name"
+                email:
+                  type: string
+                  format: email
+                  example: "johnsmith@example.com"
+                  description: "User's email address"
+
+      responses:
+        200:
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: "550e8400-e29b-41d4-a716-446655440000"
+                  email:
+                    type: string
+                    format: email
+                    example: "johnsmith@example.com"
+                  name:
+                    type: string
+                    example: "John Smith"
+                  role:
+                    type: string
+                    enum: ["TEACHER", "STUDENT"]
+                    example: "TEACHER"
+                  created_at:
+                    type: string
+                    format: date-time
+                    example: "2024-07-20T10:30:00Z"
+                  updated_at:
+                    type: string
+                    format: date-time
+                    example: "2024-07-20T15:45:00Z"
+
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                invalid_email:
+                  summary: Invalid email format
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Invalid input data"
+                      details:
+                        email: ["Enter a valid email address."]
+                
+                email_already_exists:
+                  summary: Email already in use
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Invalid input data"
+                      details:
+                        email: ["User with this email already exists."]
+                
+                missing_name:
+                  summary: Name is required
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Invalid input data"
+                      details:
+                        name: ["This field is required."]
+
+        401:
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "AUTHENTICATION_ERROR"
+                      message:
+                        type: string
+                        example: "Authentication required"
+                      details:
+                        type: object
+                        properties:
+                          detail:
+                            type: string
+                            example: "Authentication credentials were not provided."
+
   /api/auth/token/refresh/:
     post:
       summary: Refresh JWT access token

@@ -1,60 +1,55 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Badge from '@/components/ui/badge';
 import Skeleton from '@/components/ui/skeleton';
+import Alert from '@/components/ui/alert';
 import { authenticatedFetch } from '@/lib/auth';
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [alerts, setAlerts] = useState<Array<{id: number, variant: "info" | "success" | "warning" | "destructive", message: string}>>([]);
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    phone: '',
-    bio: ''
+    email: ''
   });
 
   const fetchUserProfile = async () => {
     try {
-      // First, try to load from localStorage immediately
+      // First, load from localStorage immediately
       const userData = localStorage.getItem('user_data');
       if (userData) {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
         setFormData({
           name: parsedUser.name || '',
-          email: parsedUser.email || '',
-          phone: parsedUser.phone || '',
-          bio: parsedUser.bio || ''
+          email: parsedUser.email || ''
         });
-        setLoading(false); // Show data immediately
+        setLoading(false);
       }
 
-      // Then try to fetch fresh data from API (with automatic token refresh)
+      // Then fetch fresh data from API
       const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/profile/`);
 
       if (response.ok) {
         const profileData = await response.json();
-        // Update localStorage with fresh data
         localStorage.setItem('user_data', JSON.stringify(profileData));
         setUser(profileData);
         setFormData({
           name: profileData.name || '',
-          email: profileData.email || '',
-          phone: profileData.phone || '',
-          bio: profileData.bio || ''
+          email: profileData.email || ''
         });
-      } else {
-        console.log('Profile fetch failed, using cached data');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-      // If API fails, keep showing localStorage data
     } finally {
       setLoading(false);
     }
@@ -64,6 +59,20 @@ export default function ProfilePage() {
     fetchUserProfile();
   }, []);
 
+  const showToast = (variant: "info" | "success" | "warning" | "destructive", message: string) => {
+    const id = Date.now();
+    setAlerts(prev => [...prev, { id, variant, message }]);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      setAlerts(prev => prev.filter(alert => alert.id !== id));
+    }, 5000);
+  };
+
+  const removeAlert = (id: number) => {
+    setAlerts(prev => prev.filter(alert => alert.id !== id));
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -72,20 +81,81 @@ export default function ProfilePage() {
     }));
   };
 
-  const handleSave = () => {
-    // In a real app, this would make an API call
-    const updatedUser = { ...user, ...formData };
-    localStorage.setItem('user_data', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-    setIsEditing(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    
+    try {
+      const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/profile/update/`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: formData.name.trim()
+        })
+      });
+
+      if (response.ok) {
+        const updatedProfile = await response.json();
+        
+        
+        // Extract the actual user data from API response
+        const actualUserData = updatedProfile.user || updatedProfile;
+        
+        // Use the updated profile data directly (no more phone/bio to merge)
+        const mergedProfile = actualUserData;
+        
+        // Update localStorage with CORRECT structure (direct user object, not nested)
+        localStorage.setItem('user_data', JSON.stringify(mergedProfile));
+        
+        
+        // Update local state
+        setUser(mergedProfile);
+        setFormData({
+          name: mergedProfile.name || '',
+          email: mergedProfile.email || ''
+        });
+        
+        setIsEditing(false);
+        showToast('success', 'Profile updated successfully!');
+        
+        // Force complete page refresh
+        setTimeout(() => {
+          // Use both methods to ensure complete refresh
+          router.refresh();
+          // This forces a hard refresh by navigating to the same URL
+          window.location.replace(window.location.href);
+        }, 500); // Very short delay to show the toast briefly
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to update profile:', errorData);
+        
+        // Handle validation errors
+        if (errorData.error && errorData.error.details) {
+          const errors = errorData.error.details;
+          let errorMessage = 'Profile update failed:\n';
+          
+          if (errors.name) {
+            errorMessage += `Name: ${errors.name.join(', ')}\n`;
+          }
+          if (errors.email) {
+            errorMessage += `Email: ${errors.email.join(', ')}\n`;
+          }
+          
+          showToast('destructive', errorMessage.trim());
+        } else {
+          showToast('destructive', 'Failed to update profile. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      showToast('destructive', 'Failed to update profile. Please check your connection and try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
     setFormData({
       name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      bio: user?.bio || ''
+      email: user?.email || ''
     });
     setIsEditing(false);
   };
@@ -218,59 +288,25 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Email</label>
-                  {isEditing ? (
-                    <Input
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="Enter your email"
-                    />
-                  ) : (
-                    <div className="text-sm p-2 bg-[var(--color-secondary)] rounded-[var(--radius)]">{user.email}</div>
-                  )}
+                  <label className="text-sm font-medium text-[var(--color-muted-foreground)] mb-2 block">Email</label>
+                  <Input
+                    name="email"
+                    type="email"
+                    value={user.email}
+                    disabled
+                    className="cursor-not-allowed"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Phone Number</label>
-                {isEditing ? (
-                  <Input
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="Enter your phone number"
-                  />
-                ) : (
-                  <div className="text-sm p-2 bg-[var(--color-secondary)] rounded-[var(--radius)]">{formData.phone || 'Not provided'}</div>
-                )}
-              </div>
 
-              <div>
-                <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Bio</label>
-                {isEditing ? (
-                  <textarea
-                    name="bio"
-                    value={formData.bio}
-                    onChange={handleInputChange}
-                    placeholder="Tell us about yourself"
-                    rows={3}
-                    className="w-full p-2 border border-[var(--color-border)] rounded-[var(--radius)] bg-[var(--background)] text-[var(--foreground)]"
-                  />
-                ) : (
-                  <div className="text-sm p-2 bg-[var(--color-secondary)] rounded-[var(--radius)] min-h-[80px]">
-                    {formData.bio || 'No bio provided'}
-                  </div>
-                )}
-              </div>
 
               {isEditing && (
                 <div className="flex space-x-3 pt-4">
-                  <Button variant="primary" onClick={handleSave}>
-                    Save Changes
+                  <Button variant="primary" onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                   </Button>
-                  <Button variant="outline" onClick={handleCancel}>
+                  <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
                     Cancel
                   </Button>
                 </div>
@@ -365,59 +401,25 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Email</label>
-                  {isEditing ? (
-                    <Input
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="Enter your email"
-                    />
-                  ) : (
-                    <div className="text-sm p-2 bg-[var(--color-secondary)] rounded-[var(--radius)]">{user.email}</div>
-                  )}
+                  <label className="text-sm font-medium text-[var(--color-muted-foreground)] mb-2 block">Email</label>
+                  <Input
+                    name="email"
+                    type="email"
+                    value={user.email}
+                    disabled
+                    className="cursor-not-allowed"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Phone Number</label>
-                {isEditing ? (
-                  <Input
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="Enter your phone number"
-                  />
-                ) : (
-                  <div className="text-sm p-2 bg-[var(--color-secondary)] rounded-[var(--radius)]">{formData.phone || 'Not provided'}</div>
-                )}
-              </div>
 
-              <div>
-                <label className="text-sm font-medium text-[var(--foreground)] mb-2 block">Bio</label>
-                {isEditing ? (
-                  <textarea
-                    name="bio"
-                    value={formData.bio}
-                    onChange={handleInputChange}
-                    placeholder="Tell us about yourself"
-                    rows={3}
-                    className="w-full p-2 border border-[var(--color-border)] rounded-[var(--radius)] bg-[var(--background)] text-[var(--foreground)]"
-                  />
-                ) : (
-                  <div className="text-sm p-2 bg-[var(--color-secondary)] rounded-[var(--radius)] min-h-[80px]">
-                    {formData.bio || 'No bio provided'}
-                  </div>
-                )}
-              </div>
 
               {isEditing && (
                 <div className="flex space-x-3 pt-4">
-                  <Button variant="primary" onClick={handleSave}>
-                    Save Changes
+                  <Button variant="primary" onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                   </Button>
-                  <Button variant="outline" onClick={handleCancel}>
+                  <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
                     Cancel
                   </Button>
                 </div>
@@ -475,5 +477,33 @@ export default function ProfilePage() {
     </div>
   );
 
-  return user.role === 'TEACHER' ? renderTeacherProfile() : renderStudentProfile();
+  return (
+    <>
+      {user.role === 'TEACHER' ? renderTeacherProfile() : renderStudentProfile()}
+      
+      {/* Toast Alerts - Bottom Right Stack */}
+      {alerts.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50 space-y-2">
+          {alerts.map((alert, index) => (
+            <Alert 
+              key={alert.id}
+              variant={alert.variant}
+              className="min-w-[300px] max-w-[400px] shadow-lg animate-in slide-in-from-right-full duration-300"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{alert.message}</span>
+                <button
+                  onClick={() => removeAlert(alert.id)}
+                  className="ml-2 text-current opacity-70 hover:opacity-100 text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+            </Alert>
+          ))}
+        </div>
+      )}
+    </>
+  );
 }

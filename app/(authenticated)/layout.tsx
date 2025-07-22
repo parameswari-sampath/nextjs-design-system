@@ -41,14 +41,26 @@ import {
   FaComments
 } from 'react-icons/fa';
 
+
+
+// Get user data from localStorage
+const getUserData = () => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const userData = localStorage.getItem('user_data');
+    return userData ? JSON.parse(userData) : null;
+  } catch {
+    return null;
+  }
+};
+
 // Utility function to clear authentication data
 const logout = async (router: any) => {
   try {
-    // Get access token for API call
     const accessToken = localStorage.getItem('access_token');
     
     if (accessToken) {
-      // Call logout API to invalidate tokens on server
       await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout/`, {
         method: 'POST',
         headers: {
@@ -60,14 +72,11 @@ const logout = async (router: any) => {
     }
   } catch (error) {
     console.error('Logout API error:', error);
-    // Continue with client-side cleanup even if API call fails
   } finally {
-    // Clear localStorage
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_data');
     
-    // Clear cookies properly
     const clearCookie = (name: string) => {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/; SameSite=Lax`;
     };
@@ -75,20 +84,7 @@ const logout = async (router: any) => {
     clearCookie('access_token');
     clearCookie('refresh_token');
     
-    // Redirect to login using Next.js router
     router.push('/login');
-  }
-};
-
-// Get user data from localStorage
-const getUserData = () => {
-  if (typeof window === 'undefined') return null;
-  
-  try {
-    const userData = localStorage.getItem('user_data');
-    return userData ? JSON.parse(userData) : null;
-  } catch {
-    return null;
   }
 };
 
@@ -164,12 +160,12 @@ export default function AuthenticatedLayout({
   };
 
   useEffect(() => {
-    // Get user data on client side
     const userData = getUserData();
+    
+    
     setUser(userData);
     setLoading(false);
 
-    // If no user data, redirect to login
     if (!userData) {
       router.push('/login');
     }
