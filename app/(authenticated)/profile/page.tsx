@@ -5,9 +5,12 @@ import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Badge from '@/components/ui/badge';
+import Skeleton from '@/components/ui/skeleton';
+import { authenticatedFetch } from '@/lib/auth';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -16,8 +19,9 @@ export default function ProfilePage() {
     bio: ''
   });
 
-  useEffect(() => {
+  const fetchUserProfile = async () => {
     try {
+      // First, try to load from localStorage immediately
       const userData = localStorage.getItem('user_data');
       if (userData) {
         const parsedUser = JSON.parse(userData);
@@ -28,10 +32,36 @@ export default function ProfilePage() {
           phone: parsedUser.phone || '',
           bio: parsedUser.bio || ''
         });
+        setLoading(false); // Show data immediately
+      }
+
+      // Then try to fetch fresh data from API (with automatic token refresh)
+      const response = await authenticatedFetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/profile/`);
+
+      if (response.ok) {
+        const profileData = await response.json();
+        // Update localStorage with fresh data
+        localStorage.setItem('user_data', JSON.stringify(profileData));
+        setUser(profileData);
+        setFormData({
+          name: profileData.name || '',
+          email: profileData.email || '',
+          phone: profileData.phone || '',
+          bio: profileData.bio || ''
+        });
+      } else {
+        console.log('Profile fetch failed, using cached data');
       }
     } catch (error) {
-      console.error('Error parsing user data:', error);
+      console.error('Error fetching profile:', error);
+      // If API fails, keep showing localStorage data
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchUserProfile();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -60,8 +90,94 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
-  if (!user) {
-    return <div className="p-6">Loading...</div>;
+  const renderProfileSkeleton = () => (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-6 w-20" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Information Skeleton */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-9 w-24" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Skeleton className="h-4 w-20 mb-2" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div>
+                  <Skeleton className="h-4 w-16 mb-2" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+              <div>
+                <Skeleton className="h-4 w-28 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-12 mb-2" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Stats Skeleton */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Skeleton className="h-6 w-32" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center">
+                <Skeleton className="h-8 w-8 mx-auto mb-2" />
+                <Skeleton className="h-4 w-24 mx-auto" />
+              </div>
+              <div className="text-center">
+                <Skeleton className="h-8 w-12 mx-auto mb-2" />
+                <Skeleton className="h-4 w-20 mx-auto" />
+              </div>
+              <div className="text-center">
+                <Skeleton className="h-8 w-8 mx-auto mb-2" />
+                <Skeleton className="h-4 w-28 mx-auto" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>
+                <Skeleton className="h-6 w-28" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="space-y-1">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-28" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading || !user) {
+    return renderProfileSkeleton();
   }
 
   const renderTeacherProfile = () => (

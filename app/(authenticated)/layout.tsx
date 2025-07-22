@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Button from '@/components/ui/button';
 import IconButton from '@/components/ui/icon-button';
 import Breadcrumbs from '@/components/ui/breadcrumbs';
+import Skeleton from '@/components/ui/skeleton';
 import { 
   FaHome, 
   FaBook, 
@@ -41,22 +42,42 @@ import {
 } from 'react-icons/fa';
 
 // Utility function to clear authentication data
-const logout = () => {
-  // Clear localStorage
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user_data');
-  
-  // Clear cookies properly
-  const clearCookie = (name: string) => {
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/; SameSite=Lax`;
-  };
-  
-  clearCookie('access_token');
-  clearCookie('refresh_token');
-  
-  // Redirect to login
-  window.location.href = '/login';
+const logout = async (router: any) => {
+  try {
+    // Get access token for API call
+    const accessToken = localStorage.getItem('access_token');
+    
+    if (accessToken) {
+      // Call logout API to invalidate tokens on server
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({})
+      });
+    }
+  } catch (error) {
+    console.error('Logout API error:', error);
+    // Continue with client-side cleanup even if API call fails
+  } finally {
+    // Clear localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_data');
+    
+    // Clear cookies properly
+    const clearCookie = (name: string) => {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/; SameSite=Lax`;
+    };
+    
+    clearCookie('access_token');
+    clearCookie('refresh_token');
+    
+    // Redirect to login using Next.js router
+    router.push('/login');
+  }
 };
 
 // Get user data from localStorage
@@ -174,8 +195,69 @@ export default function AuthenticatedLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="text-[var(--foreground)]">Loading...</div>
+      <div className="h-screen flex flex-col bg-[var(--background)]">
+        {/* Mobile Header Skeleton */}
+        <div className="md:hidden bg-[var(--color-card)] border-b border-[var(--color-border)] p-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-32" />
+            <div className="flex items-center space-x-2">
+              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Header Skeleton */}
+        <div className="hidden md:flex border-b border-[var(--color-border)]">
+          <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)]">
+            <div className="h-full flex items-center justify-center px-4">
+              <Skeleton className="h-6 w-32" />
+            </div>
+          </div>
+          <div className="flex-1 bg-[var(--color-card)]">
+            <div className="p-4 flex items-center justify-between">
+              <Skeleton className="h-5 w-48" />
+              <div className="flex items-center space-x-4">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-8 w-16" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Layout Skeleton */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar Skeleton */}
+          <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)] hidden md:flex md:flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4 space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            </div>
+            <div className="p-4 border-t border-[var(--color-border)]">
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+
+          {/* Main Content Skeleton */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-6">
+              <Skeleton className="h-8 w-48" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="p-4 bg-[var(--color-card)] rounded-[var(--radius)] border">
+                    <Skeleton className="h-6 w-32 mb-4" />
+                    <Skeleton className="h-8 w-16 mb-2" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -239,7 +321,7 @@ export default function AuthenticatedLayout({
               <Button 
                 variant="destructive" 
                 className="w-full"
-                onClick={logout}
+                onClick={() => logout(router)}
               >
                 Logout
               </Button>
@@ -273,7 +355,7 @@ export default function AuthenticatedLayout({
               </span>
               <Button 
                 variant="outline" 
-                onClick={logout}
+                onClick={() => logout(router)}
                 className="text-sm"
               >
                 Logout
