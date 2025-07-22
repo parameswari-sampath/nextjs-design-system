@@ -73,8 +73,8 @@
   --radius-check-box: 6px;
 
   /* Fonts */
-  --font-sans: var(--font-fira-sans, Arial, sans-serif);
-  --font-mono: var(--font-geist-mono, monospace);
+  --font-sans: var(--font-fira-sans, "Fira Sans", sans-serif);
+  --font-mono: var(--font-geist-mono, "Geist Mono", monospace);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -95,9 +95,18 @@
 }
 
 @layer base {
+  * {
+    font-family: var(--font-sans) !important;
+  }
+  
   body {
     background: var(--background);
     color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+  
+  /* Ensure all text elements use Fira Sans */
+  h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea, select, label {
     font-family: var(--font-sans);
   }
 }
