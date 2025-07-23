@@ -344,6 +344,7 @@ export default function QuestionBankPage() {
                         variant="warning"
                         size="sm"
                         aria-label="Edit question"
+                        onClick={() => router.push(`/edit-question/${question.id}`)}
                       >
                         <FaEdit />
                       </IconButton>
