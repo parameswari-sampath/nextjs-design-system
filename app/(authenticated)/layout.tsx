@@ -373,21 +373,42 @@ export default function AuthenticatedLayout({
                 </Button>
                 
                 {/* Sub-menu items */}
-                {item.hasSubMenu && expandedMenus[item.id] && (
-                  <div className="ml-6 mt-1 space-y-1">
-                    {item.subMenuItems?.map((subItem: any) => (
-                      <Button
-                        key={subItem.id}
-                        variant={isSubMenuItemActive(subItem) ? "primary" : "ghost"}
-                        className="w-full justify-start text-sm"
-                        onClick={() => handleMenuClick(subItem)}
-                      >
-                        <div className="h-3 w-3 mr-3 flex-shrink-0 self-center">
-                          <subItem.icon className="w-full h-full" />
+                {item.hasSubMenu && (
+                  <div 
+                    className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${
+                      expandedMenus[item.id] 
+                        ? "max-h-96 opacity-100 mt-1" 
+                        : "max-h-0 opacity-0 mt-0"
+                    }`}
+                  >
+                    <div className="space-y-1 py-1">
+                      {item.subMenuItems?.map((subItem: any, index: number) => (
+                        <div
+                          key={subItem.id}
+                          className={`transform transition-all duration-300 ease-in-out ${
+                            expandedMenus[item.id]
+                              ? "translate-y-0 opacity-100"
+                              : "-translate-y-2 opacity-0"
+                          }`}
+                          style={{
+                            transitionDelay: expandedMenus[item.id] 
+                              ? `${index * 50}ms` 
+                              : '0ms'
+                          }}
+                        >
+                          <Button
+                            variant={isSubMenuItemActive(subItem) ? "primary" : "ghost"}
+                            className="w-full justify-start text-sm"
+                            onClick={() => handleMenuClick(subItem)}
+                          >
+                            <div className="h-3 w-3 mr-3 flex-shrink-0 self-center">
+                              <subItem.icon className="w-full h-full" />
+                            </div>
+                            <span className="flex-1 text-left">{subItem.label}</span>
+                          </Button>
                         </div>
-                        <span className="flex-1 text-left">{subItem.label}</span>
-                      </Button>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -445,15 +466,19 @@ export default function AuthenticatedLayout({
       {/* Main Layout - Full Height */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Column */}
-        <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)] hidden md:flex md:flex-col">
+        <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)] hidden md:flex md:flex-col animate-in slide-in-from-left duration-300">
           {/* Sidebar Content - Scrollable */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4 space-y-1">
-              {menuItems.map((item) => (
-                <div key={item.id}>
+              {menuItems.map((item, index) => (
+                <div 
+                  key={item.id}
+                  className="animate-in slide-in-from-left fade-in duration-200"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
                   <Button
                     variant={isMenuItemActive(item) ? "primary" : "ghost"}
-                    className="w-full justify-start"
+                    className="w-full justify-start transition-all duration-200"
                     onClick={() => handleMenuClick(item)}
                   >
                     <div className="h-3.5 w-3.5 mr-3 flex-shrink-0 self-center">
@@ -473,21 +498,42 @@ export default function AuthenticatedLayout({
                   </Button>
                   
                   {/* Sub-menu items */}
-                  {item.hasSubMenu && expandedMenus[item.id] && (
-                    <div className="ml-6 mt-1 space-y-1">
-                      {item.subMenuItems?.map((subItem: any) => (
-                        <Button
-                          key={subItem.id}
-                          variant={isSubMenuItemActive(subItem) ? "primary" : "ghost"}
-                          className="w-full justify-start text-sm"
-                          onClick={() => handleMenuClick(subItem)}
-                        >
-                          <div className="h-3 w-3 mr-3 flex-shrink-0 self-center">
-                            <subItem.icon className="w-full h-full" />
+                  {item.hasSubMenu && (
+                    <div 
+                      className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${
+                        expandedMenus[item.id] 
+                          ? "max-h-96 opacity-100 mt-1" 
+                          : "max-h-0 opacity-0 mt-0"
+                      }`}
+                    >
+                      <div className="space-y-1 py-1">
+                        {item.subMenuItems?.map((subItem: any, index: number) => (
+                          <div
+                            key={subItem.id}
+                            className={`transform transition-all duration-300 ease-in-out ${
+                              expandedMenus[item.id]
+                                ? "translate-y-0 opacity-100"
+                                : "-translate-y-2 opacity-0"
+                            }`}
+                            style={{
+                              transitionDelay: expandedMenus[item.id] 
+                                ? `${index * 50}ms` 
+                                : '0ms'
+                            }}
+                          >
+                            <Button
+                              variant={isSubMenuItemActive(subItem) ? "primary" : "ghost"}
+                              className="w-full justify-start text-sm"
+                              onClick={() => handleMenuClick(subItem)}
+                            >
+                              <div className="h-3 w-3 mr-3 flex-shrink-0 self-center">
+                                <subItem.icon className="w-full h-full" />
+                              </div>
+                              <span className="flex-1 text-left">{subItem.label}</span>
+                            </Button>
                           </div>
-                          <span className="flex-1 text-left">{subItem.label}</span>
-                        </Button>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -496,7 +542,7 @@ export default function AuthenticatedLayout({
           </div>
           
           {/* Sidebar Footer - Fixed */}
-          <div className="p-4 border-t border-[var(--color-border)] flex-shrink-0">
+          <div className="p-4 border-t border-[var(--color-border)] flex-shrink-0 animate-in slide-in-from-bottom fade-in duration-300" style={{ animationDelay: "400ms" }}>
             <div className="text-xs text-[var(--color-muted-foreground)]">
               Smart MCQ v1.0.0
             </div>
