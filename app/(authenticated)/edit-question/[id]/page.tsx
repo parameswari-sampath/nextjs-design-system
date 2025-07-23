@@ -10,6 +10,7 @@ import Badge from '@/components/ui/badge';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Alert from '@/components/ui/alert';
 import Skeleton from '@/components/ui/skeleton';
+import Checkbox from '@/components/ui/checkbox';
 import { authenticatedFetch } from '@/lib/auth';
 
 interface FormData {
@@ -382,15 +383,11 @@ export default function EditQuestionPage() {
             </div>
 
             <div>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.is_active}
-                  onChange={(e) => handleInputChange('is_active', e.target.checked)}
-                  className="rounded border-[var(--color-border)]"
-                />
-                <span className="text-sm font-medium text-[var(--foreground)]">Active Question</span>
-              </label>
+              <Checkbox
+                checked={formData.is_active}
+                onChange={(e) => handleInputChange('is_active', e.target.checked)}
+                label="Active Question"
+              />
             </div>
           </CardContent>
         </Card>

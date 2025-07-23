@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Button from "@/components/ui/button";
 import IconButton from "@/components/ui/icon-button";
@@ -106,6 +106,11 @@ export default function AuthenticatedLayout({
     },
   ]);
 
+  // Debug: Log when currentNavigation changes
+  useEffect(() => {
+    console.log("📍 currentNavigation updated:", currentNavigation);
+  }, [currentNavigation]);
+
   // Role-based menu items
   const getMenuItems = (userRole: string) => {
     if (userRole === "TEACHER") {
@@ -198,9 +203,10 @@ export default function AuthenticatedLayout({
     }
   };
 
-  const handleNavigation = (
+  const handleNavigation = useCallback((
     path: Array<{ label: string; onClick?: () => void }>
   ) => {
+    console.log("🧭 handleNavigation called with path:", path);
     // Always ensure SmartMCQ is the first breadcrumb
     const breadcrumbPath = [
       {
@@ -209,10 +215,14 @@ export default function AuthenticatedLayout({
           router.push("/dashboard");
         },
       },
-      ...path.filter((item) => item.label !== "SmartMCQ"),
+      ...path.filter((item) => item.label !== "SmartMCQ").map(item => ({
+        label: item.label,
+        onClick: item.onClick || (() => {})
+      })),
     ];
+    console.log("🧭 Final breadcrumbPath:", breadcrumbPath);
     setCurrentNavigation(breadcrumbPath);
-  };
+  }, [router]);
 
   const toggleSubMenu = (menuId: number) => {
     setExpandedMenus((prev) => ({
@@ -271,40 +281,80 @@ export default function AuthenticatedLayout({
 
   // Update breadcrumbs based on current pathname
   useEffect(() => {
+    console.log("🔍 Breadcrumb useEffect triggered", { pathname, userRole: user?.role });
+    
     if (!user) return;
 
     const menuItems = getMenuItems(user.role);
+    console.log("📋 Menu items:", menuItems);
 
-    // Check main menu items first
-    let currentItem = menuItems.find((item) => item.route === pathname);
-
-    // If not found, check sub-menu items
-    if (!currentItem) {
-      for (const item of menuItems) {
-        if (item.hasSubMenu && item.subMenuItems) {
-          const subItem = item.subMenuItems.find(
-            (sub: any) => sub.route === pathname
-          );
-          if (subItem) {
-            currentItem = subItem;
-            // Auto-expand the parent menu if we're on a sub-menu page
-            setExpandedMenus((prev) => ({ ...prev, [item.id]: true }));
-            break;
-          }
+    // Check sub-menu items FIRST to prioritize more specific paths
+    let currentItem = null;
+    console.log("🔍 Searching sub-menus first...");
+    for (const item of menuItems) {
+      if (item.hasSubMenu && item.subMenuItems) {
+        console.log(`📂 Checking sub-menu for "${item.label}":`, item.subMenuItems);
+        const subItem = item.subMenuItems.find(
+          (sub: any) => sub.route === pathname
+        );
+        if (subItem) {
+          console.log("✅ Found in sub-menu:", subItem);
+          currentItem = subItem;
+          // Auto-expand the parent menu if we're on a sub-menu page
+          setExpandedMenus((prev) => ({ ...prev, [item.id]: true }));
+          break;
         }
       }
     }
 
+    // If not found in sub-menus, check main menu items
+    if (!currentItem) {
+      currentItem = menuItems.find((item) => item.route === pathname);
+      console.log("🎯 Found in main menu:", currentItem);
+    }
+
     if (currentItem) {
+      console.log("🏷️ Setting breadcrumb for:", currentItem);
       const itemBreadcrumb = currentItem.path.map((label: string) => ({
         label,
         onClick: () => {
           router.push(currentItem.route);
         },
       }));
+      console.log("🍞 Final breadcrumb path:", itemBreadcrumb);
       handleNavigation(itemBreadcrumb);
+    } else {
+      // Handle special routes that don't have menu items
+      console.log("🔧 Checking for special routes...");
+      
+      // Edit Question Page: /edit-question/[id]
+      if (pathname.startsWith('/edit-question/')) {
+        console.log("✏️ Edit question page detected");
+        const questionId = pathname.split('/').pop();
+        const editBreadcrumb = [
+          { label: "Question Bank", onClick: () => router.push("/question-bank") },
+          { label: "All Questions", onClick: () => router.push("/question-bank") },
+          { label: "Edit", onClick: () => {} },
+          { label: questionId || "Question", onClick: () => {} }
+        ];
+        console.log("✏️ Edit breadcrumb path:", editBreadcrumb);
+        handleNavigation(editBreadcrumb);
+      } 
+      // Create Question Page: /create-question (this already has a menu item, but let's be safe)
+      else if (pathname === '/create-question') {
+        console.log("➕ Create question page detected");
+        const createBreadcrumb = [
+          { label: "Question Bank", onClick: () => router.push("/question-bank") },
+          { label: "Create Question", onClick: () => router.push("/create-question") }
+        ];
+        console.log("➕ Create breadcrumb path:", createBreadcrumb);
+        handleNavigation(createBreadcrumb);
+      }
+      else {
+        console.log("❌ No menu item found for pathname:", pathname);
+      }
     }
-  }, [pathname, user, router]);
+  }, [pathname, user, router, handleNavigation]);
 
   if (loading) {
     return (
@@ -530,7 +580,7 @@ export default function AuthenticatedLayout({
       {/* Header Section - Full Width - Hidden on Mobile */}
       <div className="hidden md:flex border-b border-[var(--color-border)]">
         {/* Sidebar Header */}
-        <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)]">
+        <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)] flex-shrink-0">
           <div className="h-full flex items-center justify-center px-4">
             <h2 className="text-lg font-semibold text-[var(--foreground)]">
               SmartMCQ{" "}
@@ -543,10 +593,12 @@ export default function AuthenticatedLayout({
 
         {/* Breadcrumbs Header */}
         <div className="flex-1 bg-[var(--color-card)]">
-          <div className="p-4 flex items-center justify-between">
-            <Breadcrumbs items={currentNavigation} />
+          <div className="p-4 flex items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <Breadcrumbs items={currentNavigation} />
+            </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-shrink-0">
               <span className="text-sm text-[var(--color-muted-foreground)]">
                 Welcome,{" "}
                 <span className="font-medium text-[var(--foreground)]">
@@ -571,7 +623,7 @@ export default function AuthenticatedLayout({
       {/* Main Layout - Full Height */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Column */}
-        <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)] hidden md:flex md:flex-col animate-in slide-in-from-left duration-300">
+        <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)] hidden md:flex md:flex-col animate-in slide-in-from-left duration-300 flex-shrink-0">
           {/* Sidebar Content - Scrollable */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4 space-y-1">

@@ -214,8 +214,14 @@ export default function QuestionBankPage() {
 
   // Load questions when component mounts or pagination changes
   useEffect(() => {
+    console.log("🗂️ Question Bank page mounted/updated", { currentPage, itemsPerPage });
     fetchQuestions();
   }, [currentPage, itemsPerPage]);
+
+  // Debug: Log when page component mounts
+  useEffect(() => {
+    console.log("🗂️ Question Bank page component mounted");
+  }, []);
 
 
   const getDifficultyBadge = (difficulty: string) => {
