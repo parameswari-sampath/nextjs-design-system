@@ -66,11 +66,11 @@ const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
     }, [isOpen]);
 
     const sizeClasses = {
-      sm: "max-w-md",
-      md: "max-w-lg", 
-      lg: "max-w-2xl",
-      xl: "max-w-4xl",
-      full: "max-w-full m-4"
+      sm: "max-w-md max-h-[90vh]",
+      md: "max-w-lg max-h-[90vh]", 
+      lg: "max-w-2xl max-h-[90vh]",
+      xl: "max-w-4xl max-h-[90vh]",
+      full: "max-w-full max-h-[90vh] m-4"
     };
 
     const handleOverlayClick = (e: React.MouseEvent) => {
@@ -98,7 +98,7 @@ const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
             ref={ref}
             className={clsx(
               "relative w-full bg-[var(--color-card)] rounded-[var(--radius)] border border-[var(--color-border)] shadow-lg",
-              "animate-in fade-in-0 zoom-in-95 duration-200",
+              "animate-in fade-in-0 zoom-in-95 duration-200 flex flex-col overflow-hidden",
               sizeClasses[size]
             )}
             role="dialog"
@@ -226,7 +226,7 @@ const ModalBody = React.forwardRef<HTMLDivElement, ModalBodyProps>(
     return (
       <div
         ref={ref}
-        className={clsx("p-6", className)}
+        className={clsx("p-6 overflow-y-auto flex-1", className)}
         {...props}
       >
         {children}

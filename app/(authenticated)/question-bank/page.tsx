@@ -7,6 +7,8 @@ import Badge from '@/components/ui/badge';
 import Table, { TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption } from '@/components/ui/table';
 import Pagination, { PaginationInfo, ItemsPerPage } from '@/components/ui/pagination';
 import Skeleton from '@/components/ui/skeleton';
+import Modal, { ModalHeader, ModalTitle, ModalDescription, ModalBody, ModalFooter } from '@/components/ui/modal';
+import Spinner from '@/components/ui/spinner';
 import { authenticatedFetch } from '@/lib/auth';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 
@@ -15,6 +17,42 @@ interface Question {
   question: string;
   difficulty_level: 'EASY' | 'MEDIUM' | 'HARD';
   is_active: boolean;
+}
+
+interface QuestionDetails {
+  id: string;
+  question: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option: string;
+  explanation_question: string;
+  explanation_a: string;
+  explanation_b: string;
+  explanation_c: string;
+  explanation_d: string;
+  difficulty_level: 'EASY' | 'MEDIUM' | 'HARD';
+  subject: string;
+  tags: string;
+  tags_list: string[];
+  options: {
+    A: string;
+    B: string;
+    C: string;
+    D: string;
+  };
+  explanations: {
+    question: string;
+    A: string;
+    B: string;
+    C: string;
+    D: string;
+  };
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface QuestionsResponse {
@@ -34,6 +72,12 @@ export default function QuestionBankPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState<Question | null>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [questionDetails, setQuestionDetails] = useState<QuestionDetails | null>(null);
+  const [loadingDetailsId, setLoadingDetailsId] = useState<string | null>(null);
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -71,6 +115,98 @@ export default function QuestionBankPage() {
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1);
+  };
+
+  // Open delete confirmation modal
+  const openDeleteModal = (question: Question) => {
+    setQuestionToDelete(question);
+    setShowDeleteModal(true);
+  };
+
+  // Close delete modal
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setQuestionToDelete(null);
+  };
+
+  // Fetch question details
+  const fetchQuestionDetails = async (questionId: string) => {
+    try {
+      setLoadingDetailsId(questionId);
+      
+      const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/questions/${questionId}/`;
+      const response = await authenticatedFetch(url);
+      
+      if (response.ok) {
+        const data: QuestionDetails = await response.json();
+        setQuestionDetails(data);
+        setShowViewModal(true);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to fetch question details:', errorData);
+        setError('Failed to fetch question details. Please try again.');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (error) {
+      console.error('Error fetching question details:', error);
+      setError('Failed to fetch question details. Please check your connection.');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoadingDetailsId(null);
+    }
+  };
+
+  // Close view modal
+  const closeViewModal = () => {
+    setShowViewModal(false);
+    setQuestionDetails(null);
+  };
+
+  // Delete question function
+  const deleteQuestion = async () => {
+    if (!questionToDelete) return;
+
+    try {
+      setDeletingQuestionId(questionToDelete.id);
+      
+      const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/questions/${questionToDelete.id}/`;
+      const response = await authenticatedFetch(url, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        // Remove the question from the local state
+        setQuestions(prev => prev.filter(q => q.id !== questionToDelete.id));
+        setTotalItems(prev => prev - 1);
+        
+        // If current page becomes empty and it's not the first page, go to previous page
+        const remainingQuestions = questions.length - 1;
+        if (remainingQuestions === 0 && currentPage > 1) {
+          setCurrentPage(prev => prev - 1);
+        } else if (remainingQuestions === 0) {
+          // If we're on page 1 and no questions left, refetch to show empty state
+          fetchQuestions();
+        }
+        
+        // Close modal
+        closeDeleteModal();
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to delete question:', errorData);
+        setError('Failed to delete question. Please try again.');
+        
+        // Clear error after 5 seconds
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (error) {
+      console.error('Error deleting question:', error);
+      setError('Failed to delete question. Please check your connection.');
+      
+      // Clear error after 5 seconds
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setDeletingQuestionId(null);
+    }
   };
 
   // Load questions when component mounts or pagination changes
@@ -187,8 +323,14 @@ export default function QuestionBankPage() {
                         variant="accent"
                         size="sm"
                         aria-label="View question"
+                        onClick={() => fetchQuestionDetails(question.id)}
+                        disabled={loadingDetailsId === question.id}
                       >
-                        <FaEye />
+                        {loadingDetailsId === question.id ? (
+                          <Spinner size="xs" color="primary" />
+                        ) : (
+                          <FaEye />
+                        )}
                       </IconButton>
                       <IconButton
                         variant="warning"
@@ -201,8 +343,14 @@ export default function QuestionBankPage() {
                         variant="destructive"
                         size="sm"
                         aria-label="Delete question"
+                        onClick={() => openDeleteModal(question)}
+                        disabled={deletingQuestionId === question.id}
                       >
-                        <FaTrash />
+                        {deletingQuestionId === question.id ? (
+                          <Spinner size="xs" color="destructive" />
+                        ) : (
+                          <FaTrash />
+                        )}
                       </IconButton>
                     </div>
                   </TableCell>
@@ -231,6 +379,147 @@ export default function QuestionBankPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={closeDeleteModal}
+        size="sm"
+      >
+        <ModalHeader>
+          <ModalTitle>Delete Question</ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <ModalDescription>
+            Are you sure you want to delete this question? This action cannot be undone.
+          </ModalDescription>
+          {questionToDelete && (
+            <div className="mt-4 space-y-3">
+              <div className="relative">
+                <p className="text-sm text-[var(--foreground)] line-clamp-5 leading-relaxed">
+                  {questionToDelete.question}
+                </p>
+                {questionToDelete.question.split('\n').length > 5 || questionToDelete.question.length > 200 ? (
+                  <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-[var(--color-card)] to-transparent pointer-events-none"></div>
+                ) : null}
+              </div>
+              <div className="p-3 bg-[var(--color-destructive)]/10 border border-[var(--color-destructive)]/20 rounded-[var(--radius)]">
+                <p className="text-sm text-[var(--color-destructive)]">
+                  This action is permanent and cannot be reversed.
+                </p>
+              </div>
+            </div>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            variant="outline"
+            onClick={closeDeleteModal}
+            disabled={deletingQuestionId !== null}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={deleteQuestion}
+            disabled={deletingQuestionId !== null}
+          >
+            {deletingQuestionId !== null && (
+              <Spinner size="xs" color="white" className="mr-2" />
+            )}
+            Delete Question
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* View Question Details Modal */}
+      <Modal
+        isOpen={showViewModal}
+        onClose={closeViewModal}
+        size="xl"
+      >
+        <ModalHeader>
+          <ModalTitle>Question Details</ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          {questionDetails && (
+            <div className="space-y-6">
+              {/* Question Section */}
+              <div>
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <h3 className="text-lg font-semibold text-[var(--foreground)]">Question</h3>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-[var(--foreground)] font-medium underline">{questionDetails.subject}</span>
+                    {getDifficultyBadge(questionDetails.difficulty_level)}
+                    {getStatusBadge(questionDetails.is_active)}
+                  </div>
+                </div>
+                <p className="text-[var(--foreground)] leading-relaxed mb-2">{questionDetails.question}</p>
+                {questionDetails.explanation_question && (
+                  <p className="text-sm text-[var(--color-muted-foreground)]">{questionDetails.explanation_question}</p>
+                )}
+              </div>
+
+              {/* Options Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--foreground)] mb-3">Options</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Object.entries(questionDetails.options).map(([key, value]) => (
+                    <div key={key} className={`p-3 rounded-[var(--radius)] border border-[var(--color-gray-200)] ${
+                      questionDetails.correct_option === key 
+                        ? 'bg-[var(--color-green-50)] border-[var(--color-green-200)]' 
+                        : 'bg-[var(--color-secondary)]'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
+                          questionDetails.correct_option === key
+                            ? 'bg-[var(--color-green-500)] text-white'
+                            : 'bg-[var(--color-gray-500)] text-white'
+                        }`}>
+                          {key}
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-[var(--foreground)]">{value}</p>
+                          {questionDetails.explanations[key as keyof typeof questionDetails.explanations] && (
+                            <p className="mt-2 text-sm text-[var(--color-muted-foreground)] italic">
+                              {questionDetails.explanations[key as keyof typeof questionDetails.explanations]}
+                            </p>
+                          )}
+                        </div>
+                        {questionDetails.correct_option === key && (
+                          <Badge variant="success" className="ml-2">Correct</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+
+
+              {/* Tags Section */}
+              {questionDetails.tags_list && questionDetails.tags_list.length > 0 && (
+                <div>
+                  <h4 className="text-md font-medium text-[var(--foreground)] mb-2">Tags</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {questionDetails.tags_list.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="px-2 py-1">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="secondary" onClick={closeViewModal}>
+            Close
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
