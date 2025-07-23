@@ -178,21 +178,20 @@ export default function QuestionBankPage() {
       });
       
       if (response.ok) {
-        // Remove the question from the local state
-        setQuestions(prev => prev.filter(q => q.id !== questionToDelete.id));
-        setTotalItems(prev => prev - 1);
+        // Close modal first
+        closeDeleteModal();
         
-        // If current page becomes empty and it's not the first page, go to previous page
-        const remainingQuestions = questions.length - 1;
-        if (remainingQuestions === 0 && currentPage > 1) {
+        // Check if current page will become empty after deletion
+        const remainingQuestionsOnPage = questions.length - 1;
+        
+        if (remainingQuestionsOnPage === 0 && currentPage > 1) {
+          // If current page becomes empty and it's not the first page, go to previous page
           setCurrentPage(prev => prev - 1);
-        } else if (remainingQuestions === 0) {
-          // If we're on page 1 and no questions left, refetch to show empty state
+          // The useEffect will trigger fetchQuestions when currentPage changes
+        } else {
+          // For all other cases, just refetch to get fresh data
           fetchQuestions();
         }
-        
-        // Close modal
-        closeDeleteModal();
       } else {
         const errorData = await response.json();
         console.error('Failed to delete question:', errorData);

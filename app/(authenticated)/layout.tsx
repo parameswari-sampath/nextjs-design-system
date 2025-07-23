@@ -152,6 +152,23 @@ export default function AuthenticatedLayout({
           path: ["Test"],
           icon: FaFileAlt,
           route: "/test",
+          hasSubMenu: true,
+          subMenuItems: [
+            {
+              id: 31,
+              label: "All Tests",
+              path: ["Test", "All Tests"],
+              icon: FaClipboardList,
+              route: "/test/all-tests",
+            },
+            {
+              id: 32,
+              label: "Create Test",
+              path: ["Test", "Create Test"],
+              icon: FaEdit,
+              route: "/test/create",
+            },
+          ],
         },
         {
           id: 4,
@@ -183,7 +200,7 @@ export default function AuthenticatedLayout({
           label: "Test",
           path: ["Test"],
           icon: FaFileAlt,
-          route: "/test",
+          route: "/test/all-tests",
         },
         {
           id: 3,
@@ -349,6 +366,25 @@ export default function AuthenticatedLayout({
         ];
         console.log("➕ Create breadcrumb path:", createBreadcrumb);
         handleNavigation(createBreadcrumb);
+      }
+      // Test pages
+      else if (pathname === '/test/all-tests') {
+        console.log("📝 All tests page detected");
+        const allTestsBreadcrumb = [
+          { label: "Test", onClick: () => router.push("/test/all-tests") },
+          { label: "All Tests", onClick: () => router.push("/test/all-tests") }
+        ];
+        console.log("📝 All tests breadcrumb path:", allTestsBreadcrumb);
+        handleNavigation(allTestsBreadcrumb);
+      }
+      else if (pathname === '/test/create') {
+        console.log("➕ Create test page detected");
+        const createTestBreadcrumb = [
+          { label: "Test", onClick: () => router.push("/test/all-tests") },
+          { label: "Create Test", onClick: () => router.push("/test/create") }
+        ];
+        console.log("➕ Create test breadcrumb path:", createTestBreadcrumb);
+        handleNavigation(createTestBreadcrumb);
       }
       else {
         console.log("❌ No menu item found for pathname:", pathname);
