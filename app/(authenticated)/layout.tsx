@@ -98,6 +98,7 @@ export default function AuthenticatedLayout({
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({});
   const [currentNavigation, setCurrentNavigation] = useState([
     { label: "Dashboard", onClick: () => handleNavigation([{ label: "Dashboard" }]) }
   ]);
@@ -107,7 +108,18 @@ export default function AuthenticatedLayout({
     if (userRole === 'TEACHER') {
       return [
         { id: 1, label: "Dashboard", path: ["Dashboard"], icon: FaHome, route: "/dashboard" },
-        { id: 2, label: "Question Bank", path: ["Question Bank"], icon: FaQuestionCircle, route: "/question-bank" },
+        { 
+          id: 2, 
+          label: "Question Bank", 
+          path: ["Question Bank"], 
+          icon: FaQuestionCircle, 
+          route: "/question-bank",
+          hasSubMenu: true,
+          subMenuItems: [
+            { id: 21, label: "All Questions", path: ["Question Bank", "All Questions"], icon: FaClipboardList, route: "/question-bank" },
+            { id: 22, label: "Create Question", path: ["Question Bank", "Create Question"], icon: FaEdit, route: "/create-question" }
+          ]
+        },
         { id: 3, label: "Test", path: ["Test"], icon: FaFileAlt, route: "/test" },
         { id: 4, label: "Analytics", path: ["Analytics"], icon: FaChartBar, route: "/analytics" },
         { id: 5, label: "Profile", path: ["Profile"], icon: FaUser, route: "/profile" }
@@ -137,7 +149,20 @@ export default function AuthenticatedLayout({
     setCurrentNavigation(breadcrumbPath);
   };
 
+  const toggleSubMenu = (menuId: number) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuId]: !prev[menuId]
+    }));
+  };
+
   const handleMenuClick = (item: any) => {
+    // If item has sub-menu, toggle it instead of navigating
+    if (item.hasSubMenu) {
+      toggleSubMenu(item.id);
+      return;
+    }
+    
     // Navigate using Next.js router
     router.push(item.route);
     
@@ -156,6 +181,15 @@ export default function AuthenticatedLayout({
 
   // Helper function to check if menu item is active
   const isMenuItemActive = (item: any) => {
+    if (item.hasSubMenu) {
+      // Parent menu items with sub-menus should not be active, only expanded
+      return false;
+    }
+    return pathname === item.route;
+  };
+
+  // Helper function to check if sub-menu item is active
+  const isSubMenuItemActive = (item: any) => {
     return pathname === item.route;
   };
 
@@ -176,7 +210,24 @@ export default function AuthenticatedLayout({
     if (!user) return;
     
     const menuItems = getMenuItems(user.role);
-    const currentItem = menuItems.find(item => item.route === pathname);
+    
+    // Check main menu items first
+    let currentItem = menuItems.find(item => item.route === pathname);
+    
+    // If not found, check sub-menu items
+    if (!currentItem) {
+      for (const item of menuItems) {
+        if (item.hasSubMenu && item.subMenuItems) {
+          const subItem = item.subMenuItems.find((sub: any) => sub.route === pathname);
+          if (subItem) {
+            currentItem = subItem;
+            // Auto-expand the parent menu if we're on a sub-menu page
+            setExpandedMenus(prev => ({ ...prev, [item.id]: true }));
+            break;
+          }
+        }
+      }
+    }
     
     if (currentItem) {
       const itemBreadcrumb = currentItem.path.map((label: string) => ({
@@ -299,17 +350,47 @@ export default function AuthenticatedLayout({
         <div className="md:hidden bg-[var(--color-card)] border-b border-[var(--color-border)]">
           <div className="p-4 space-y-1">
             {menuItems.map((item) => (
-              <Button
-                key={item.id}
-                variant={isMenuItemActive(item) ? "primary" : "ghost"}
-                className="w-full justify-start"
-                onClick={() => handleMenuClick(item)}
-              >
-                <div className="h-3.5 w-3.5 mr-3 flex-shrink-0 self-center">
-                  <item.icon className="w-full h-full" />
-                </div>
-                <span className="flex-1 text-left">{item.label}</span>
-              </Button>
+              <div key={item.id}>
+                <Button
+                  variant={isMenuItemActive(item) ? "primary" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => handleMenuClick(item)}
+                >
+                  <div className="h-3.5 w-3.5 mr-3 flex-shrink-0 self-center">
+                    <item.icon className="w-full h-full" />
+                  </div>
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {item.hasSubMenu && (
+                    <svg
+                      className={`h-4 w-4 transition-transform ${expandedMenus[item.id] ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
+                </Button>
+                
+                {/* Sub-menu items */}
+                {item.hasSubMenu && expandedMenus[item.id] && (
+                  <div className="ml-6 mt-1 space-y-1">
+                    {item.subMenuItems?.map((subItem: any) => (
+                      <Button
+                        key={subItem.id}
+                        variant={isSubMenuItemActive(subItem) ? "primary" : "ghost"}
+                        className="w-full justify-start text-sm"
+                        onClick={() => handleMenuClick(subItem)}
+                      >
+                        <div className="h-3 w-3 mr-3 flex-shrink-0 self-center">
+                          <subItem.icon className="w-full h-full" />
+                        </div>
+                        <span className="flex-1 text-left">{subItem.label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
             
             {/* Mobile Logout Button */}
@@ -369,17 +450,47 @@ export default function AuthenticatedLayout({
           <div className="flex-1 overflow-y-auto">
             <div className="p-4 space-y-1">
               {menuItems.map((item) => (
-                <Button
-                  key={item.id}
-                  variant={isMenuItemActive(item) ? "primary" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => handleMenuClick(item)}
-                >
-                  <div className="h-3.5 w-3.5 mr-3 flex-shrink-0 self-center">
-                    <item.icon className="w-full h-full" />
-                  </div>
-                  <span className="flex-1 text-left">{item.label}</span>
-                </Button>
+                <div key={item.id}>
+                  <Button
+                    variant={isMenuItemActive(item) ? "primary" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => handleMenuClick(item)}
+                  >
+                    <div className="h-3.5 w-3.5 mr-3 flex-shrink-0 self-center">
+                      <item.icon className="w-full h-full" />
+                    </div>
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {item.hasSubMenu && (
+                      <svg
+                        className={`h-4 w-4 transition-transform ${expandedMenus[item.id] ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    )}
+                  </Button>
+                  
+                  {/* Sub-menu items */}
+                  {item.hasSubMenu && expandedMenus[item.id] && (
+                    <div className="ml-6 mt-1 space-y-1">
+                      {item.subMenuItems?.map((subItem: any) => (
+                        <Button
+                          key={subItem.id}
+                          variant={isSubMenuItemActive(subItem) ? "primary" : "ghost"}
+                          className="w-full justify-start text-sm"
+                          onClick={() => handleMenuClick(subItem)}
+                        >
+                          <div className="h-3 w-3 mr-3 flex-shrink-0 self-center">
+                            <subItem.icon className="w-full h-full" />
+                          </div>
+                          <span className="flex-1 text-left">{subItem.label}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>

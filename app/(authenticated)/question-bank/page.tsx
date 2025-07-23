@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/button';
 import IconButton from '@/components/ui/icon-button';
 import Badge from '@/components/ui/badge';
@@ -63,6 +64,8 @@ interface QuestionsResponse {
 }
 
 export default function QuestionBankPage() {
+  const router = useRouter();
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -238,7 +241,12 @@ export default function QuestionBankPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[var(--foreground)]">Question Bank</h1>
-        <Button variant="primary">Create Question</Button>
+        <Button 
+          variant="primary"
+          onClick={() => router.push('/create-question')}
+        >
+          Create Question
+        </Button>
       </div>
 
       <div className="space-y-4">
