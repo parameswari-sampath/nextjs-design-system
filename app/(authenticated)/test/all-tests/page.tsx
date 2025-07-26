@@ -445,7 +445,6 @@ export default function AllTestsPage() {
                       <Skeleton className="h-8 w-8 rounded" />
                       <Skeleton className="h-8 w-8 rounded" />
                       <Skeleton className="h-8 w-8 rounded" />
-                      <Skeleton className="h-8 w-8 rounded" />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -473,21 +472,20 @@ export default function AllTestsPage() {
                   </TableCell>
                   <TableCell className="w-[120px]">
                     {assessment.access_code ? (
-                      <button
+                      <Badge 
+                        variant="info"
+                        className="cursor-pointer hover:bg-[var(--color-blue-500)]/20 w-[85px] justify-center"
                         onClick={() => copyAccessCode(assessment.access_code!)}
-                        className={`inline-flex items-center justify-center rounded-[var(--radius)] px-3 py-1 text-xs font-medium transition-colors cursor-pointer w-16 ${
-                          copiedCodes.has(assessment.access_code)
-                            ? 'bg-[var(--color-green-500)]/10 text-[var(--color-green-700)] border border-[var(--color-green-500)]/20'
-                            : 'bg-[var(--color-secondary)] text-[var(--color-secondary-foreground)] border border-[var(--color-gray-300)] hover:bg-[var(--color-secondary)]/80'
-                        }`}
                         title="Click to copy access code"
                       >
                         {copiedCodes.has(assessment.access_code) ? (
                           <FaCheck className="w-3 h-3 animate-pulse" />
                         ) : (
-                          <span className="select-none font-mono text-xs">{assessment.access_code}</span>
+                          <span className="font-[var(--font-mono)] text-[11px] tracking-[0.1em] font-medium">
+                            {assessment.access_code}
+                          </span>
                         )}
-                      </button>
+                      </Badge>
                     ) : (
                       <span className="text-sm text-[var(--color-muted-foreground)]">-</span>
                     )}
@@ -526,9 +524,7 @@ export default function AllTestsPage() {
                         <FaEdit />
                       </IconButton>
                       <IconButton
-                        variant={
-                          assessment.is_published ? "secondary" : "success"
-                        }
+                        variant="success"
                         size="sm"
                         aria-label={
                           assessment.is_published
@@ -541,9 +537,9 @@ export default function AllTestsPage() {
                         {publishingId === assessment.id ? (
                           <Spinner size="xs" color="primary" />
                         ) : assessment.is_published ? (
-                          <FaToggleOff />
-                        ) : (
                           <FaToggleOn />
+                        ) : (
+                          <FaToggleOff />
                         )}
                       </IconButton>
                       {/* <IconButton
@@ -719,21 +715,20 @@ export default function AllTestsPage() {
                         Access Code:
                       </span>
                       {assessmentDetails.access_code ? (
-                        <button
+                        <Badge 
+                          variant="info"
+                          className="cursor-pointer hover:bg-[var(--color-blue-500)]/20 w-[85px] justify-center ml-2"
                           onClick={() => copyAccessCode(assessmentDetails.access_code)}
-                          className={`inline-flex items-center justify-center rounded-[var(--radius)] px-3 py-1 text-xs font-medium transition-colors cursor-pointer ml-2 w-16 ${
-                            copiedCodes.has(assessmentDetails.access_code)
-                              ? 'bg-[var(--color-green-500)]/10 text-[var(--color-green-700)] border border-[var(--color-green-500)]/20'
-                              : 'bg-[var(--color-secondary)] text-[var(--color-secondary-foreground)] border border-[var(--color-gray-300)] hover:bg-[var(--color-secondary)]/80'
-                          }`}
                           title="Click to copy access code"
                         >
                           {copiedCodes.has(assessmentDetails.access_code) ? (
                             <FaCheck className="w-3 h-3 animate-pulse" />
                           ) : (
-                            <span className="select-none font-mono text-xs">{assessmentDetails.access_code}</span>
+                            <span className="font-[var(--font-mono)] text-[11px] tracking-[0.1em] font-medium">
+                              {assessmentDetails.access_code}
+                            </span>
                           )}
-                        </button>
+                        </Badge>
                       ) : (
                         <p className="text-[var(--color-muted-foreground)]">None</p>
                       )}

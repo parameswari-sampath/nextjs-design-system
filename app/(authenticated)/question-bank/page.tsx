@@ -222,7 +222,6 @@ export default function QuestionBankPage() {
     console.log("🗂️ Question Bank page component mounted");
   }, []);
 
-
   const getDifficultyBadge = (difficulty: string) => {
     switch (difficulty) {
       case 'EASY':

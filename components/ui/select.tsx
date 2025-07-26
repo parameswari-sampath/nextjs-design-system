@@ -56,7 +56,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {error && errorMessage && (
           <p
             id="select-error-text"
-            className="text-xs text-[var(--color-destructive,#e2445c)]"
+            className="text-xs text-[var(--color-destructive)]"
           >
             {errorMessage}
           </p>

@@ -409,7 +409,7 @@ export default function EditQuestionPage() {
                   )}
                 </div>
                 <Textarea
-                  value={formData[`option_${option.toLowerCase()}` as keyof FormData]}
+                  value={String(formData[`option_${option.toLowerCase()}` as keyof FormData] || '')}
                   onChange={(e) => handleInputChange(`option_${option.toLowerCase()}` as keyof FormData, e.target.value)}
                   placeholder={`Enter option ${option}...`}
                   rows={2}
@@ -421,7 +421,7 @@ export default function EditQuestionPage() {
                     Explanation for Option {option} <span className="text-[var(--color-destructive)]">*</span>
                   </label>
                   <Textarea
-                    value={formData[`explanation_${option.toLowerCase()}` as keyof FormData]}
+                    value={String(formData[`explanation_${option.toLowerCase()}` as keyof FormData] || '')}
                     onChange={(e) => handleInputChange(`explanation_${option.toLowerCase()}` as keyof FormData, e.target.value)}
                     placeholder="Self Explanation"
                     rows={2}

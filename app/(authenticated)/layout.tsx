@@ -20,7 +20,7 @@ import {
   FaCheck,
   FaArchive,
   FaUser,
-  FaShield,
+  FaShieldAlt,
   FaBuilding,
   FaEye,
   FaArrowUp,

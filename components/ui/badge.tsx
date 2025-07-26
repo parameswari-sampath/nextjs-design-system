@@ -1,7 +1,7 @@
 import React from "react";
 import clsx from "clsx";
 
-type BadgeVariant = "default" | "success" | "warning" | "destructive" | "info" | "secondary";
+type BadgeVariant = "default" | "primary" | "success" | "warning" | "destructive" | "info" | "secondary";
 
 type BadgeProps = React.HTMLAttributes<HTMLDivElement> & {
   variant?: BadgeVariant;
@@ -18,6 +18,9 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
           {
             // Default variant
             "bg-[var(--color-card)] text-[var(--color-card-foreground)] border border-[var(--color-border)]": variant === "default",
+            
+            // Primary variant
+            "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]": variant === "primary",
             
             // Secondary variant
             "bg-[var(--color-secondary)] text-[var(--color-secondary-foreground)] border border-[var(--color-gray-300)]": variant === "secondary",

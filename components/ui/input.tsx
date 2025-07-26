@@ -18,14 +18,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             "text-sm",
             "rounded-[var(--radius)]",
             "appearance-none",
-            "bg-[var(--color-input,#ffffff)]",
-            "text-[var(--color-foreground,#171717)]",
+            "bg-[var(--color-input)]",
+            "text-[var(--foreground)]",
             "border",
-            "placeholder:text-[var(--color-muted-foreground,#9ba8b2)]",
+            "placeholder:text-[var(--color-muted-foreground)]",
             "focus:outline-none focus:ring-2 focus:border-transparent",
             error
-              ? "border-[var(--color-destructive,#e2445c)] focus:ring-[var(--color-destructive,#e2445c)]"
-              : "border-[var(--color-border,#e1e4e6)] focus:ring-[var(--color-primary,#0073ea)]",
+              ? "border-[var(--color-destructive)] focus:ring-[var(--color-destructive)]"
+              : "border-[var(--color-border)] focus:ring-[var(--color-primary)]",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             className
           )}
@@ -36,7 +36,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {error && errorMessage && (
           <p
             id="input-error-text"
-            className="text-xs text-[var(--color-destructive,#e2445c)]"
+            className="text-xs text-[var(--color-destructive)]"
           >
             {errorMessage}
           </p>

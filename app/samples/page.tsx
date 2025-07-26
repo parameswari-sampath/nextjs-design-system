@@ -24,6 +24,8 @@ import Dropdown, { DropdownTrigger, DropdownContent, DropdownItem, DropdownSepar
 import Spinner, { LoadingButton } from "@/components/ui/spinner";
 import FileUpload from "@/components/ui/file-upload";
 import Pagination, { PaginationInfo, ItemsPerPage } from "@/components/ui/pagination";
+import Wizard, { WizardStep, WizardSubStep } from "@/components/ui/wizard";
+import TestCreationExample from "@/components/ui/test-creation-example";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -68,6 +70,36 @@ export default function SamplesPage() {
     dropzone: [],
     button: [],
     minimal: []
+  });
+  
+  // Wizard state
+  const [wizardData, setWizardData] = useState({
+    personalInfo: {
+      name: "",
+      email: "",
+      phone: "",
+      isValid: false
+    },
+    preferences: {
+      theme: "",
+      notifications: false,
+      newsletter: false,
+      isValid: false
+    },
+    settings: {
+      privacy: "",
+      language: "",
+      timezone: "",
+      isValid: false
+    }
+  });
+
+  // Extended wizard state for hundreds of questions
+  const [surveyData, setSurveyData] = useState({
+    demographics: Array(20).fill("").map((_, i) => ({ id: `demo_${i}`, value: "", isValid: false })),
+    lifestyle: Array(25).fill("").map((_, i) => ({ id: `lifestyle_${i}`, value: "", isValid: false })),
+    preferences: Array(30).fill("").map((_, i) => ({ id: `pref_${i}`, value: "", isValid: false })),
+    feedback: Array(15).fill("").map((_, i) => ({ id: `feedback_${i}`, value: "", isValid: false }))
   });
   
   // Pagination state
@@ -199,6 +231,150 @@ export default function SamplesPage() {
     showToast("success", `${files.length} file(s) selected`);
   };
   
+  // Wizard handlers
+  const handleWizardComplete = (data: any) => {
+    showToast("success", "Wizard completed successfully!");
+    console.log("Wizard data:", data);
+  };
+  
+  const handleWizardStepChange = (currentStep: number) => {
+    showToast("info", `Moved to step ${currentStep + 1}`);
+  };
+  
+  const updateWizardData = (section: keyof typeof wizardData, field: string, value: any) => {
+    setWizardData(prev => {
+      const updated = {
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: value
+        }
+      };
+      
+      // Validate sections
+      if (section === 'personalInfo') {
+        updated.personalInfo.isValid = !!(updated.personalInfo.name && updated.personalInfo.email && updated.personalInfo.phone);
+      } else if (section === 'preferences') {
+        updated.preferences.isValid = !!updated.preferences.theme;
+      } else if (section === 'settings') {
+        updated.settings.isValid = !!(updated.settings.privacy && updated.settings.language && updated.settings.timezone);
+      }
+      
+      return updated;
+    });
+  };
+
+  // Survey data handlers
+  const updateSurveyData = (section: keyof typeof surveyData, questionIndex: number, value: string) => {
+    setSurveyData(prev => {
+      const updated = { ...prev };
+      updated[section] = [...updated[section]];
+      updated[section][questionIndex] = {
+        ...updated[section][questionIndex],
+        value,
+        isValid: value.trim().length > 0
+      };
+      return updated;
+    });
+  };
+
+  const generateDemographicsQuestions = () => {
+    const questions = [
+      "What is your age range?",
+      "What is your gender?", 
+      "What is your highest level of education?",
+      "What is your current employment status?",
+      "What is your annual household income range?",
+      "What is your marital status?",
+      "How many children do you have?",
+      "What is your primary mode of transportation?",
+      "Where do you currently live?",
+      "What type of housing do you live in?",
+      "How long have you lived in your current location?",
+      "What is your primary language?",
+      "What other languages do you speak?",
+      "What is your religious affiliation?",
+      "What is your political affiliation?",
+      "What is your ethnicity?",
+      "Do you have any disabilities?",
+      "What is your current health status?",
+      "Do you have health insurance?",
+      "What is your primary source of news?"
+    ];
+    
+    return questions.map((question, index) => ({
+      id: `demographics-${index}`,
+      title: `Question ${index + 1}`,
+      isValid: surveyData.demographics[index]?.isValid || false,
+      content: (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+              {question}
+            </label>
+            <Textarea
+              value={surveyData.demographics[index]?.value || ""}
+              onChange={(e) => updateSurveyData('demographics', index, e.target.value)}
+              placeholder="Enter your answer..."
+              rows={3}
+            />
+          </div>
+        </div>
+      )
+    }));
+  };
+
+  const generateLifestyleQuestions = () => {
+    const questions = [
+      "How many hours do you work per week?",
+      "How do you typically spend your free time?",
+      "What are your favorite hobbies?",
+      "How often do you exercise?",
+      "What type of exercise do you prefer?",
+      "How many hours of sleep do you get per night?",
+      "What time do you usually go to bed?",
+      "What time do you usually wake up?",
+      "How often do you eat out?",
+      "What is your preferred cuisine?",
+      "Do you follow any specific diet?",
+      "How often do you drink alcohol?",
+      "Do you smoke?",
+      "How often do you travel?",
+      "What is your preferred mode of travel?",
+      "How much time do you spend on social media daily?",
+      "What social media platforms do you use?",
+      "How often do you read books?",
+      "What genres do you prefer?",
+      "How often do you watch TV or movies?",
+      "What streaming services do you use?",
+      "How often do you listen to music?",
+      "What music genres do you prefer?",
+      "How often do you attend social events?",
+      "Do you prefer indoor or outdoor activities?"
+    ];
+    
+    return questions.map((question, index) => ({
+      id: `lifestyle-${index}`,
+      title: `Question ${index + 1}`,
+      isValid: surveyData.lifestyle[index]?.isValid || false,
+      content: (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+              {question}
+            </label>
+            <Textarea
+              value={surveyData.lifestyle[index]?.value || ""}
+              onChange={(e) => updateSurveyData('lifestyle', index, e.target.value)}
+              placeholder="Enter your answer..."
+              rows={3}
+            />
+          </div>
+        </div>
+      )
+    }));
+  };
+  
   // Pagination functions
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -273,6 +449,251 @@ export default function SamplesPage() {
       </svg>
     );
   };
+
+  // Define wizard steps
+  const wizardSteps: WizardStep[] = [
+    {
+      id: "personal-info",
+      title: "Personal Information",
+      description: "Enter your basic personal details",
+      isValid: wizardData.personalInfo.isValid,
+      content: (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Full Name</label>
+            <Input
+              value={wizardData.personalInfo.name}
+              onChange={(e) => updateWizardData('personalInfo', 'name', e.target.value)}
+              placeholder="Enter your full name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Email Address</label>
+            <Input
+              type="email"
+              value={wizardData.personalInfo.email}
+              onChange={(e) => updateWizardData('personalInfo', 'email', e.target.value)}
+              placeholder="Enter your email address"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Phone Number</label>
+            <Input
+              type="tel"
+              value={wizardData.personalInfo.phone}
+              onChange={(e) => updateWizardData('personalInfo', 'phone', e.target.value)}
+              placeholder="Enter your phone number"
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "preferences",
+      title: "Preferences",
+      description: "Configure your application preferences",
+      isValid: wizardData.preferences.isValid,
+      content: (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Theme Preference</label>
+            <Select
+              value={wizardData.preferences.theme}
+              onChange={(e) => updateWizardData('preferences', 'theme', e.target.value)}
+            >
+              <option value="">Select theme preference</option>
+              <option value="light">Light Theme</option>
+              <option value="dark">Dark Theme</option>
+              <option value="auto">Auto (System)</option>
+            </Select>
+          </div>
+          <div className="space-y-3">
+            <Checkbox
+              checked={wizardData.preferences.notifications}
+              onChange={(checked) => updateWizardData('preferences', 'notifications', checked)}
+              label="Enable push notifications"
+            />
+            <Checkbox
+              checked={wizardData.preferences.newsletter}
+              onChange={(checked) => updateWizardData('preferences', 'newsletter', checked)}
+              label="Subscribe to newsletter"
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "settings",
+      title: "Account Settings",
+      description: "Configure your account settings and security",
+      isValid: wizardData.settings.isValid,
+      content: (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Privacy Level</label>
+            <div className="space-y-2">
+              <Radio
+                name="privacy"
+                value="public"
+                checked={wizardData.settings.privacy === "public"}
+                onChange={() => updateWizardData('settings', 'privacy', "public")}
+                label="Public - Anyone can see your profile"
+              />
+              <Radio
+                name="privacy"
+                value="friends"
+                checked={wizardData.settings.privacy === "friends"}
+                onChange={() => updateWizardData('settings', 'privacy', "friends")}
+                label="Friends Only - Only friends can see your profile"
+              />
+              <Radio
+                name="privacy"
+                value="private"
+                checked={wizardData.settings.privacy === "private"}
+                onChange={() => updateWizardData('settings', 'privacy', "private")}
+                label="Private - Only you can see your profile"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Language</label>
+            <Select
+              value={wizardData.settings.language}
+              onChange={(e) => updateWizardData('settings', 'language', e.target.value)}
+            >
+              <option value="">Select language</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Timezone</label>
+            <Select
+              value={wizardData.settings.timezone}
+              onChange={(e) => updateWizardData('settings', 'timezone', e.target.value)}
+            >
+              <option value="">Select timezone</option>
+              <option value="utc">UTC (Coordinated Universal Time)</option>
+              <option value="est">Eastern Standard Time</option>
+              <option value="pst">Pacific Standard Time</option>
+              <option value="cet">Central European Time</option>
+            </Select>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "review",
+      title: "Review & Complete",
+      description: "Review your information and complete the setup",
+      isValid: true,
+      isOptional: true,
+      content: (
+        <div className="space-y-6">
+          <div>
+            <h4 className="font-medium text-[var(--foreground)] mb-3">Personal Information</h4>
+            <div className="bg-[var(--color-secondary)] p-4 rounded-[var(--radius)] space-y-2">
+              <p className="text-sm"><span className="font-medium">Name:</span> {wizardData.personalInfo.name || "Not provided"}</p>
+              <p className="text-sm"><span className="font-medium">Email:</span> {wizardData.personalInfo.email || "Not provided"}</p>
+              <p className="text-sm"><span className="font-medium">Phone:</span> {wizardData.personalInfo.phone || "Not provided"}</p>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-medium text-[var(--foreground)] mb-3">Preferences</h4>
+            <div className="bg-[var(--color-secondary)] p-4 rounded-[var(--radius)] space-y-2">
+              <p className="text-sm"><span className="font-medium">Theme:</span> {wizardData.preferences.theme || "Not selected"}</p>
+              <p className="text-sm"><span className="font-medium">Notifications:</span> {wizardData.preferences.notifications ? "Enabled" : "Disabled"}</p>
+              <p className="text-sm"><span className="font-medium">Newsletter:</span> {wizardData.preferences.newsletter ? "Subscribed" : "Not subscribed"}</p>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-medium text-[var(--foreground)] mb-3">Settings</h4>
+            <div className="bg-[var(--color-secondary)] p-4 rounded-[var(--radius)] space-y-2">
+              <p className="text-sm"><span className="font-medium">Privacy:</span> {wizardData.settings.privacy || "Not set"}</p>
+              <p className="text-sm"><span className="font-medium">Language:</span> {wizardData.settings.language || "Not selected"}</p>
+              <p className="text-sm"><span className="font-medium">Timezone:</span> {wizardData.settings.timezone || "Not selected"}</p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  ];
+
+  // Extended wizard with hundreds of questions using sub-steps
+  const extendedWizardSteps: WizardStep[] = [
+    {
+      id: "demographics",
+      title: "Demographics Survey",
+      description: "Personal demographic information (20 questions)",
+      subSteps: generateDemographicsQuestions()
+    },
+    {
+      id: "lifestyle", 
+      title: "Lifestyle Assessment",
+      description: "Lifestyle and habits survey (25 questions)",
+      subSteps: generateLifestyleQuestions()
+    },
+    {
+      id: "preferences",
+      title: "Preferences & Opinions", 
+      description: "Your preferences and opinions (30 questions)",
+      subSteps: Array(30).fill(null).map((_, index) => ({
+        id: `preference-${index}`,
+        title: `Preference Question ${index + 1}`,
+        isValid: surveyData.preferences[index]?.isValid || false,
+        content: (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Rate your preference for this topic (1-10):
+              </label>
+              <Input
+                type="number"
+                min="1"
+                max="10"
+                value={surveyData.preferences[index]?.value || ""}
+                onChange={(e) => updateSurveyData('preferences', index, e.target.value)}
+                placeholder="Enter rating 1-10"
+              />
+              <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                This is preference question {index + 1} of 30. Each question represents a different preference category.
+              </p>
+            </div>
+          </div>
+        )
+      }))
+    },
+    {
+      id: "feedback",
+      title: "Feedback & Comments",
+      description: "Final feedback and additional comments (15 questions)", 
+      subSteps: Array(15).fill(null).map((_, index) => ({
+        id: `feedback-${index}`,
+        title: `Feedback Question ${index + 1}`,
+        isValid: surveyData.feedback[index]?.isValid || false,
+        content: (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Please provide your feedback on the following topic:
+              </label>
+              <Textarea
+                value={surveyData.feedback[index]?.value || ""}
+                onChange={(e) => updateSurveyData('feedback', index, e.target.value)}
+                placeholder="Enter your detailed feedback..."
+                rows={4}
+              />
+              <p className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                Feedback question {index + 1} of 15. Your input helps us improve our services.
+              </p>
+            </div>
+          </div>
+        )
+      }))
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
@@ -1983,6 +2404,122 @@ export default function SamplesPage() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Wizard Component */}
+        <div className="space-y-8">
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Wizard Component</h3>
+            <p className="text-[var(--color-muted-foreground)] mb-6">
+              Multi-step wizard with progress tracking, step validation, and navigation controls. 
+              Features include step-by-step navigation, progress bar, form validation, and completion handling.
+            </p>
+            
+            <div className="bg-[var(--color-card)] p-6 rounded-[var(--radius)] border border-[var(--color-border)]">
+              <Wizard
+                steps={wizardSteps}
+                onComplete={handleWizardComplete}
+                onStepChange={handleWizardStepChange}
+                showProgressBar={true}
+                showStepNumbers={true}
+                allowSkipOptional={true}
+              />
+            </div>
+            
+            <div className="mt-4 text-sm text-[var(--color-muted-foreground)]">
+              <strong>Features:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Progress bar with completion percentage</li>
+                <li>Clickable step navigation for completed steps</li>
+                <li>Form validation per step</li>
+                <li>Optional steps with skip functionality</li>
+                <li>Responsive design with mobile support</li>
+                <li>Step completion tracking</li>
+                <li>Data persistence across steps</li>
+              </ul>
+            </div>
+          </div>
+          
+          {/* Extended Wizard with Hundreds of Questions */}
+          <div className="mt-12">
+            <h4 className="text-lg font-semibold mb-4">Extended Survey Wizard (90+ Questions)</h4>
+            <p className="text-[var(--color-muted-foreground)] mb-6">
+              Demonstration of handling hundreds of questions using sub-steps. This wizard contains 90 questions 
+              across 4 main categories, each broken down into manageable sub-steps.
+            </p>
+            
+            <div className="bg-[var(--color-card)] p-6 rounded-[var(--radius)] border border-[var(--color-border)]">
+              <Wizard
+                steps={extendedWizardSteps}
+                onComplete={(data) => {
+                  showToast("success", "Extended survey completed! 90+ questions processed.");
+                  console.log("Extended survey data:", data);
+                }}
+                onStepChange={(step) => {
+                  showToast("info", `Survey section ${step + 1}: ${extendedWizardSteps[step]?.title}`);
+                }}
+                showProgressBar={true}
+                showStepNumbers={true}
+                allowSkipOptional={false}
+              />
+            </div>
+            
+            <div className="mt-4 text-sm text-[var(--color-muted-foreground)]">
+              <strong>Extended Features for Large Content:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li><strong>Sub-steps:</strong> Break large sections into manageable pieces</li>
+                <li><strong>90 total questions</strong> across 4 main categories</li>
+                <li><strong>Section progress:</strong> Shows progress within current section</li>
+                <li><strong>Memory efficient:</strong> Only renders current question</li>
+                <li><strong>Scalable:</strong> Can handle 100s or 1000s of questions</li>
+                <li><strong>Smart navigation:</strong> Previous/Next handles sub-steps automatically</li>
+                <li><strong>Validation per question:</strong> Individual question validation</li>
+              </ul>
+              
+              <div className="mt-4 p-3 bg-[var(--color-secondary)] rounded border-l-4 border-l-[var(--color-primary)]">
+                <p className="text-sm font-medium">💡 Pro Tip for Large Datasets:</p>
+                <p className="text-xs mt-1">
+                  For surveys with 100+ questions, consider implementing lazy loading, 
+                  data persistence to local storage, and progress saving to handle user sessions effectively.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Decoupled Wizard Architecture */}
+          <div className="mt-12">
+            <h4 className="text-lg font-semibold mb-4">Decoupled Wizard Architecture</h4>
+            <p className="text-[var(--color-muted-foreground)] mb-6">
+              A completely decoupled wizard architecture that separates UI layout from data management. 
+              This example demonstrates test creation with metadata, question selection, settings, and review steps.
+            </p>
+            
+            <div className="bg-[var(--color-card)] p-6 rounded-[var(--radius)] border border-[var(--color-border)]">
+              <TestCreationExample />
+            </div>
+            
+            <div className="mt-4 text-sm text-[var(--color-muted-foreground)]">
+              <strong>Decoupled Architecture Benefits:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li><strong>Pure Separation:</strong> UI layout completely separate from data logic</li>
+                <li><strong>Context-Driven:</strong> All state management through React Context</li>
+                <li><strong>Reusable Layout:</strong> Same wizard UI for any multi-step process</li>
+                <li><strong>Flexible Rules:</strong> Configurable navigation and validation rules</li>
+                <li><strong>Mandatory Questions:</strong> Built-in support for required fields/questions</li>
+                <li><strong>Table Integration:</strong> Seamless integration with question selection tables</li>
+                <li><strong>Easy Testing:</strong> Layout and business logic can be tested separately</li>
+              </ul>
+              
+              <div className="mt-4 p-3 bg-[var(--color-secondary)] rounded border-l-4 border-l-[var(--color-primary)]">
+                <p className="text-sm font-medium">🏗️ Architecture Pattern:</p>
+                <p className="text-xs mt-1">
+                  <strong>WizardProvider</strong> (Context) → <strong>WizardConnected</strong> (Bridge) → <strong>WizardLayout</strong> (Pure UI)
+                  <br />
+                  Each page/component manages its own data and validation, wizard only handles navigation.
+                </p>
               </div>
             </div>
           </div>

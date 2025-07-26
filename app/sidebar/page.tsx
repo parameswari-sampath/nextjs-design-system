@@ -104,7 +104,11 @@ export default function SidebarPage() {
   ];
 
   const handleNavigation = (path: Array<{label: string, onClick?: () => void}>) => {
-    setCurrentNavigation(path);
+    const pathWithOnClick = path.map(item => ({
+      ...item,
+      onClick: item.onClick || (() => {})
+    }));
+    setCurrentNavigation(pathWithOnClick);
   };
 
   const handleMenuClick = (item: any) => {

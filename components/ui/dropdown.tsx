@@ -89,10 +89,11 @@ const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTriggerProps
     const { onToggle, isOpen } = useDropdownContext();
 
     if (asChild && React.isValidElement(children)) {
-      return React.cloneElement(children, {
-        ...children.props,
+      const childProps = children.props as any;
+      return React.cloneElement(children as React.ReactElement<any>, {
+        ...childProps,
         onClick: (e: React.MouseEvent) => {
-          children.props.onClick?.(e);
+          childProps.onClick?.(e);
           onToggle();
         },
         "aria-expanded": isOpen,

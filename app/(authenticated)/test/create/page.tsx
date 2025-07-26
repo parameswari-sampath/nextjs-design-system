@@ -122,6 +122,8 @@ export default function CreateTestPage() {
     try {
       setLoading(true);
       
+      console.log('Creating assessment with data:', formData);
+      
       const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/assessments/`;
       const response = await authenticatedFetch(url, {
         method: 'POST',
@@ -133,17 +135,29 @@ export default function CreateTestPage() {
       
       if (response.ok) {
         const data = await response.json();
-        const accessCodeMsg = data.access_code ? ` Access code: ${data.access_code}` : '';
-        showToast("success", `Assessment created successfully!${accessCodeMsg}`);
         
-        // Navigate to the assessments list after a short delay
-        setTimeout(() => {
-          router.push('/test/all-tests');
-        }, 2000);
+        // Navigate directly to add questions page
+        router.push(`/test/add-questions/${data.assessment.id}`);
       } else {
-        const errorData = await response.json();
-        console.error('Failed to create assessment:', errorData);
-        showToast("destructive", "Failed to create assessment. Please try again.");
+        try {
+          const errorData = await response.json();
+          console.error('Failed to create assessment:', errorData);
+          
+          // Extract specific error message if available
+          let errorMessage = "Failed to create assessment. Please try again.";
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.details && Array.isArray(errorData.details)) {
+            errorMessage = errorData.details.join(', ');
+          }
+          
+          showToast("destructive", errorMessage);
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+          showToast("destructive", `Failed to create assessment. Status: ${response.status}`);
+        }
       }
     } catch (error) {
       console.error('Error creating assessment:', error);
@@ -394,10 +408,11 @@ export default function CreateTestPage() {
             variant="primary"
             disabled={loading}
           >
-            {loading ? 'Creating...' : 'Create Assessment'}
+            {loading ? 'Creating Assessment...' : 'Add Questions'}
           </Button>
         </div>
       </form>
+
 
       {/* Toast Alerts - Bottom Right Stack */}
       {alerts.length > 0 && (

@@ -25,7 +25,7 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
               "disabled:cursor-not-allowed disabled:opacity-50",
               checked 
                 ? "bg-[var(--color-primary)] border-[var(--color-primary)]" 
-                : "bg-[var(--color-gray-100)] border-[var(--color-border)]",
+                : "bg-[var(--color-secondary)] border-[var(--color-border)]",
               error && !checked && "border-[var(--color-destructive)]",
               "focus-visible:ring-[var(--color-primary)]",
               className
@@ -37,7 +37,7 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
           >
             <span
               className={clsx(
-                "pointer-events-none block h-3.5 w-3.5 rounded-full bg-white border border-[var(--color-border)] ring-0 transition-transform ml-0.5",
+                "pointer-events-none block h-3.5 w-3.5 rounded-full bg-[var(--color-card)] border border-[var(--color-border)] ring-0 transition-transform ml-0.5",
                 checked ? "translate-x-3.5" : "translate-x-0"
               )}
             />
