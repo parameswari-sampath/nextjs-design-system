@@ -64,6 +64,7 @@ interface QuestionsResponse {
 }
 
 export default function QuestionBankPage() {
+  console.log("🗂️ [QUESTION BANK] Component mounting/rendering");
   const router = useRouter();
   
   // Pagination state

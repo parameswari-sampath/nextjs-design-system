@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/button";
 import IconButton from "@/components/ui/icon-button";
 import Breadcrumbs from "@/components/ui/breadcrumbs";
@@ -86,32 +87,18 @@ const logout = async (router: any) => {
   }
 };
 
-export default function AuthenticatedLayout({
+function AuthenticatedLayoutInner({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuth();
+  // console.log("🔍 [AUTH LAYOUT] Component re-rendering with pathname:", pathname, "user:", user?.name, "loading:", loading);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [currentNavigation, setCurrentNavigation] = useState([
-    {
-      label: "Dashboard",
-      onClick: () => handleNavigation([{ label: "Dashboard" }]),
-    },
-  ]);
-
-  // Debug: Log when currentNavigation changes
-  useEffect(() => {
-    console.log("📍 currentNavigation updated:", currentNavigation);
-  }, [currentNavigation]);
-
-  // Role-based menu items
+  
+  // Role-based menu items - MOVED UP
   const getMenuItems = (userRole: string) => {
     if (userRole === "TEACHER") {
       return [
@@ -220,32 +207,90 @@ export default function AuthenticatedLayout({
     }
   };
 
-  const handleNavigation = useCallback((
-    path: Array<{ label: string; onClick?: () => void }>
-  ) => {
-    console.log("🧭 handleNavigation called with path:", path);
-    // Always ensure SmartMCQ is the first breadcrumb
-    const breadcrumbPath = [
-      {
-        label: "SmartMCQ",
-        onClick: () => {
-          router.push("/dashboard");
-        },
-      },
-      ...path.filter((item) => item.label !== "SmartMCQ").map(item => ({
-        label: item.label,
-        onClick: item.onClick || (() => {})
-      })),
-    ];
-    console.log("🧭 Final breadcrumbPath:", breadcrumbPath);
-    setCurrentNavigation(breadcrumbPath);
-  }, [router]);
+  // Compute expanded menus directly - NO STATE!
+  const getExpandedMenus = (currentPathname: string, currentUser: any) => {
+    if (!currentUser) return {};
+    
+    const menuItems = getMenuItems(currentUser.role);
+    const expanded: { [key: string]: boolean } = {};
+    
+    for (const item of menuItems) {
+      if (item.hasSubMenu && item.subMenuItems) {
+        const hasActiveSubItem = item.subMenuItems.some((sub: any) => sub.route === currentPathname);
+        if (hasActiveSubItem) {
+          expanded[item.id] = true;
+        }
+      }
+    }
+    return expanded;
+  };
 
+  const expandedMenus = getExpandedMenus(pathname, user);
+  // console.log("📍 Computed expandedMenus:", expandedMenus);
+
+  // Calculate breadcrumbs directly from pathname and user - NO STATE!
+  const getBreadcrumbs = (currentPathname: string, currentUser: any) => {
+    if (!currentUser) {
+      return [{ label: "SmartMCQ", onClick: () => router.push("/dashboard") }];
+    }
+
+    const menuItems = getMenuItems(currentUser.role);
+    
+    // Check sub-menu items first
+    for (const item of menuItems) {
+      if (item.hasSubMenu && item.subMenuItems) {
+        const subItem = item.subMenuItems.find((sub: any) => sub.route === currentPathname);
+        if (subItem) {
+          return [
+            { label: "SmartMCQ", onClick: () => router.push("/dashboard") },
+            ...subItem.path.map((label: string) => ({ label, onClick: () => router.push(subItem.route) }))
+          ];
+        }
+      }
+    }
+
+    // Check main menu items
+    const mainItem = menuItems.find((item) => item.route === currentPathname);
+    if (mainItem) {
+      return [
+        { label: "SmartMCQ", onClick: () => router.push("/dashboard") },
+        ...mainItem.path.map((label: string) => ({ label, onClick: () => router.push(mainItem.route) }))
+      ];
+    }
+
+    // Handle special routes
+    if (currentPathname.startsWith('/edit-question/')) {
+      const questionId = currentPathname.split('/').pop();
+      return [
+        { label: "SmartMCQ", onClick: () => router.push("/dashboard") },
+        { label: "Question Bank", onClick: () => router.push("/question-bank") },
+        { label: "All Questions", onClick: () => router.push("/question-bank") },
+        { label: "Edit", onClick: () => {} },
+        { label: questionId || "Question", onClick: () => {} }
+      ];
+    }
+
+    // Default breadcrumb
+    return [{ label: "SmartMCQ", onClick: () => router.push("/dashboard") }];
+  };
+
+  const currentNavigation = getBreadcrumbs(pathname, user);
+  // console.log("📍 Computed breadcrumbs:", currentNavigation);
+
+
+  // For manual toggle (mobile menu), we still need state
+  const [manuallyToggled, setManuallyToggled] = useState<{ [key: string]: boolean }>({});
+  
   const toggleSubMenu = (menuId: number) => {
-    setExpandedMenus((prev) => ({
+    setManuallyToggled((prev) => ({
       ...prev,
       [menuId]: !prev[menuId],
     }));
+  };
+  
+  // Combine auto-expanded and manually toggled
+  const isMenuExpanded = (menuId: number) => {
+    return expandedMenus[menuId] || manuallyToggled[menuId];
   };
 
   const handleMenuClick = (item: any) => {
@@ -257,15 +302,6 @@ export default function AuthenticatedLayout({
 
     // Navigate using Next.js router
     router.push(item.route);
-
-    // Update breadcrumb - pass the item path directly
-    const itemBreadcrumb = item.path.map((label: string) => ({
-      label,
-      onClick: () => {
-        router.push(item.route);
-      },
-    }));
-    handleNavigation(itemBreadcrumb);
 
     // Close mobile menu
     setMobileMenuOpen(false);
@@ -285,190 +321,35 @@ export default function AuthenticatedLayout({
     return pathname === item.route;
   };
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    const userData = getUserData();
-
-    setUser(userData);
-    setLoading(false);
-
-    if (!userData) {
+    if (!loading && !user) {
+      // console.log("🔍 [AUTH LAYOUT] No user data, redirecting to login");
       router.push("/login");
     }
-  }, [router]);
+  }, [loading, user, router]);
 
-  // Update breadcrumbs based on current pathname
-  useEffect(() => {
-    console.log("🔍 Breadcrumb useEffect triggered", { pathname, userRole: user?.role });
-    
-    if (!user) return;
 
-    const menuItems = getMenuItems(user.role);
-    console.log("📋 Menu items:", menuItems);
-
-    // Check sub-menu items FIRST to prioritize more specific paths
-    let currentItem = null;
-    console.log("🔍 Searching sub-menus first...");
-    for (const item of menuItems) {
-      if (item.hasSubMenu && item.subMenuItems) {
-        console.log(`📂 Checking sub-menu for "${item.label}":`, item.subMenuItems);
-        const subItem = item.subMenuItems.find(
-          (sub: any) => sub.route === pathname
-        );
-        if (subItem) {
-          console.log("✅ Found in sub-menu:", subItem);
-          currentItem = subItem;
-          // Auto-expand the parent menu if we're on a sub-menu page
-          setExpandedMenus((prev) => ({ ...prev, [item.id]: true }));
-          break;
-        }
-      }
-    }
-
-    // If not found in sub-menus, check main menu items
-    if (!currentItem) {
-      currentItem = menuItems.find((item) => item.route === pathname);
-      console.log("🎯 Found in main menu:", currentItem);
-    }
-
-    if (currentItem) {
-      console.log("🏷️ Setting breadcrumb for:", currentItem);
-      const itemBreadcrumb = currentItem.path.map((label: string) => ({
-        label,
-        onClick: () => {
-          router.push(currentItem.route);
-        },
-      }));
-      console.log("🍞 Final breadcrumb path:", itemBreadcrumb);
-      handleNavigation(itemBreadcrumb);
-    } else {
-      // Handle special routes that don't have menu items
-      console.log("🔧 Checking for special routes...");
-      
-      // Edit Question Page: /edit-question/[id]
-      if (pathname.startsWith('/edit-question/')) {
-        console.log("✏️ Edit question page detected");
-        const questionId = pathname.split('/').pop();
-        const editBreadcrumb = [
-          { label: "Question Bank", onClick: () => router.push("/question-bank") },
-          { label: "All Questions", onClick: () => router.push("/question-bank") },
-          { label: "Edit", onClick: () => {} },
-          { label: questionId || "Question", onClick: () => {} }
-        ];
-        console.log("✏️ Edit breadcrumb path:", editBreadcrumb);
-        handleNavigation(editBreadcrumb);
-      } 
-      // Create Question Page: /create-question (this already has a menu item, but let's be safe)
-      else if (pathname === '/create-question') {
-        console.log("➕ Create question page detected");
-        const createBreadcrumb = [
-          { label: "Question Bank", onClick: () => router.push("/question-bank") },
-          { label: "Create Question", onClick: () => router.push("/create-question") }
-        ];
-        console.log("➕ Create breadcrumb path:", createBreadcrumb);
-        handleNavigation(createBreadcrumb);
-      }
-      // Test pages
-      else if (pathname === '/test/all-tests') {
-        console.log("📝 All tests page detected");
-        const allTestsBreadcrumb = [
-          { label: "Test", onClick: () => router.push("/test/all-tests") },
-          { label: "All Tests", onClick: () => router.push("/test/all-tests") }
-        ];
-        console.log("📝 All tests breadcrumb path:", allTestsBreadcrumb);
-        handleNavigation(allTestsBreadcrumb);
-      }
-      else if (pathname === '/test/create') {
-        console.log("➕ Create test page detected");
-        const createTestBreadcrumb = [
-          { label: "Test", onClick: () => router.push("/test/all-tests") },
-          { label: "Create Test", onClick: () => router.push("/test/create") }
-        ];
-        console.log("➕ Create test breadcrumb path:", createTestBreadcrumb);
-        handleNavigation(createTestBreadcrumb);
-      }
-      else {
-        console.log("❌ No menu item found for pathname:", pathname);
-      }
-    }
-  }, [pathname, user, router, handleNavigation]);
-
+  // Show a minimal loading state during initial hydration only
   if (loading) {
+    // console.log("🔍 [AUTH LAYOUT] Rendering loading skeleton");
     return (
       <div className="h-screen flex flex-col bg-[var(--background)]">
-        {/* Mobile Header Skeleton */}
-        <div className="md:hidden bg-[var(--color-card)] border-b border-[var(--color-border)] p-4">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-32" />
-            <div className="flex items-center space-x-2">
-              <Skeleton className="h-6 w-16" />
-              <Skeleton className="h-6 w-6" />
-            </div>
-          </div>
-        </div>
-
-        {/* Desktop Header Skeleton */}
-        <div className="hidden md:flex border-b border-[var(--color-border)]">
-          <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)]">
-            <div className="h-full flex items-center justify-center px-4">
-              <Skeleton className="h-6 w-32" />
-            </div>
-          </div>
-          <div className="flex-1 bg-[var(--color-card)]">
-            <div className="p-4 flex items-center justify-between">
-              <Skeleton className="h-5 w-48" />
-              <div className="flex items-center space-x-4">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-6 w-16" />
-                <Skeleton className="h-8 w-16" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Layout Skeleton */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar Skeleton */}
-          <div className="w-64 bg-[var(--color-card)] border-r border-[var(--color-border)] hidden md:flex md:flex-col">
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-4 space-y-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
-            </div>
-            <div className="p-4 border-t border-[var(--color-border)]">
-              <Skeleton className="h-4 w-32" />
-            </div>
-          </div>
-
-          {/* Main Content Skeleton */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6">
-              <Skeleton className="h-8 w-48" />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="p-4 bg-[var(--color-card)] rounded-[var(--radius)] border"
-                  >
-                    <Skeleton className="h-6 w-32 mb-4" />
-                    <Skeleton className="h-8 w-16 mb-2" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        {/* Minimal loading indicator */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
         </div>
       </div>
     );
   }
 
   if (!user) {
+    // console.log("🔍 [AUTH LAYOUT] No user, returning null (should redirect)");
     return null; // Will redirect in useEffect
   }
 
   const menuItems = getMenuItems(user.role);
+  // console.log("🔍 [AUTH LAYOUT] Rendering main layout for user:", user.name, "role:", user.role, "pathname:", pathname);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--background)]">
@@ -537,7 +418,7 @@ export default function AuthenticatedLayout({
                   {item.hasSubMenu && (
                     <svg
                       className={`h-4 w-4 transition-transform ${
-                        expandedMenus[item.id] ? "rotate-180" : ""
+                        isMenuExpanded(item.id) ? "rotate-180" : ""
                       }`}
                       fill="none"
                       stroke="currentColor"
@@ -557,7 +438,7 @@ export default function AuthenticatedLayout({
                 {item.hasSubMenu && (
                   <div
                     className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${
-                      expandedMenus[item.id]
+                      isMenuExpanded(item.id)
                         ? "max-h-96 opacity-100 mt-1"
                         : "max-h-0 opacity-0 mt-0"
                     }`}
@@ -567,12 +448,12 @@ export default function AuthenticatedLayout({
                         <div
                           key={subItem.id}
                           className={`transform transition-all duration-300 ease-in-out ${
-                            expandedMenus[item.id]
+                            isMenuExpanded(item.id)
                               ? "translate-y-0 opacity-100"
                               : "-translate-y-2 opacity-0"
                           }`}
                           style={{
-                            transitionDelay: expandedMenus[item.id]
+                            transitionDelay: isMenuExpanded(item.id)
                               ? `${index * 50}ms`
                               : "0ms",
                           }}
@@ -681,7 +562,7 @@ export default function AuthenticatedLayout({
                     {item.hasSubMenu && (
                       <svg
                         className={`h-4 w-4 transition-transform ${
-                          expandedMenus[item.id] ? "rotate-180" : ""
+                          isMenuExpanded(item.id) ? "rotate-180" : ""
                         }`}
                         fill="none"
                         stroke="currentColor"
@@ -701,7 +582,7 @@ export default function AuthenticatedLayout({
                   {item.hasSubMenu && (
                     <div
                       className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${
-                        expandedMenus[item.id]
+                        isMenuExpanded(item.id)
                           ? "max-h-96 opacity-100 mt-1"
                           : "max-h-0 opacity-0 mt-0"
                       }`}
@@ -712,12 +593,12 @@ export default function AuthenticatedLayout({
                             <div
                               key={subItem.id}
                               className={`transform transition-all duration-300 ease-in-out ${
-                                expandedMenus[item.id]
+                                isMenuExpanded(item.id)
                                   ? "translate-y-0 opacity-100"
                                   : "-translate-y-2 opacity-0"
                               }`}
                               style={{
-                                transitionDelay: expandedMenus[item.id]
+                                transitionDelay: isMenuExpanded(item.id)
                                   ? `${index * 50}ms`
                                   : "0ms",
                               }}
@@ -761,8 +642,26 @@ export default function AuthenticatedLayout({
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        <div className="flex-1 overflow-y-auto">
+          {(() => {
+            // console.log("🎯 [MAIN CONTENT] About to render children for pathname:", pathname, "user:", user?.name);
+            // console.log("🎯 [MAIN CONTENT] Children type:", typeof children);
+            return children;
+          })()}
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthenticatedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AuthProvider>
+      <AuthenticatedLayoutInner>{children}</AuthenticatedLayoutInner>
+    </AuthProvider>
   );
 }

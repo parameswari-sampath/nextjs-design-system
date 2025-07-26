@@ -45,6 +45,7 @@ const initialFormData: FormData = {
 };
 
 export default function CreateQuestionPage() {
+  console.log("➕ [CREATE QUESTION] Component mounting/rendering");
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

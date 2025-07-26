@@ -6,6 +6,7 @@ import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
 
 export default function ResultsPage() {
+  console.log("📊 [RESULTS] Component mounting/rendering");
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {

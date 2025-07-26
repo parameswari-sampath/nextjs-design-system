@@ -44,6 +44,7 @@ const initialFormData: FormData = {
 };
 
 export default function CreateTestPage() {
+  console.log("🧪 [CREATE TEST] Component mounting/rendering");
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [loading, setLoading] = useState(false);

@@ -1,27 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Badge from '@/components/ui/badge';
 import Alert from '@/components/ui/alert';
 import Button from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
-export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
+function DashboardPage() {
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    // Get user data from localStorage
-    try {
-      const userData = localStorage.getItem('user_data');
-      if (userData) {
-        setUser(JSON.parse(userData));
-      }
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-    }
-  }, []);
+  console.log("🟢 [DASHBOARD] Component rendering, user:", user?.name, "loading:", loading);
 
-  if (!user) {
+  if (loading) {
+    console.log("🟢 [DASHBOARD] Still loading, showing loading state");
     return (
       <div className="p-6">
         <div className="space-y-6">
@@ -30,6 +22,13 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  if (!user) {
+    console.log("🟢 [DASHBOARD] No user data available");
+    return null;
+  }
+
+  console.log("🟢 [DASHBOARD] Rendering dashboard for user:", user.name, "role:", user.role);
 
   const renderTeacherDashboard = () => (
     <div className="p-6 space-y-6">
@@ -281,3 +280,5 @@ export default function DashboardPage() {
 
   return user.role === 'TEACHER' ? renderTeacherDashboard() : renderStudentDashboard();
 }
+
+export default DashboardPage;

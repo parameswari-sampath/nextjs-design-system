@@ -11,6 +11,7 @@ import Alert from '@/components/ui/alert';
 import { authenticatedFetch } from '@/lib/auth';
 
 export default function ProfilePage() {
+  console.log("👤 [PROFILE] Component mounting/rendering");
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);

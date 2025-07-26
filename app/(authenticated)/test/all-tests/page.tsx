@@ -79,6 +79,7 @@ interface AssessmentsResponse {
 }
 
 export default function AllTestsPage() {
+  console.log("📝 [ALL TESTS] Component mounting/rendering");
   const router = useRouter();
 
   // Pagination state

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, ReactNode } from 'react';
 import { authenticatedFetch } from '@/lib/auth';
 
 interface User {
@@ -37,21 +37,28 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize with loading state to match server-side rendering
+  const [state, setState] = useState<{ user: User | null; loading: boolean }>({ user: null, loading: true });
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Load initial user data from localStorage
-  useEffect(() => {
+  // Load user data immediately on client-side to minimize flicker
+  // Using useLayoutEffect for synchronous execution before DOM updates
+  useLayoutEffect(() => {
+    // Set hydrated flag immediately to prevent multiple useEffect runs
+    setIsHydrated(true);
+    
     const userData = localStorage.getItem('user_data');
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
+        setState({ user: parsedUser, loading: false });
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error('🔐 [AUTH CONTEXT] Error parsing user data:', error);
+        setState({ user: null, loading: false });
       }
+    } else {
+      setState({ user: null, loading: false });
     }
-    setLoading(false);
   }, []);
 
   // Fetch fresh user data from API
@@ -63,7 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        setState(prev => ({ user: userData, loading: prev.loading }));
         localStorage.setItem('user_data', JSON.stringify(userData));
       }
     } catch (error) {
@@ -73,12 +80,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Update user data (for optimistic updates)
   const updateUser = (userData: Partial<User>) => {
-    setUser(prev => {
-      if (!prev) return null;
+    setState(prev => {
+      if (!prev.user) return prev;
       
-      const updatedUser = { ...prev, ...userData };
+      const updatedUser = { ...prev.user, ...userData };
       localStorage.setItem('user_data', JSON.stringify(updatedUser));
-      return updatedUser;
+      return { user: updatedUser, loading: prev.loading };
     });
   };
 
@@ -101,7 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Logout API error:', error);
     } finally {
       // Clear all data
-      setUser(null);
+      setState({ user: null, loading: false });
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user_data');
@@ -120,8 +127,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const value = {
-    user,
-    loading,
+    user: state.user,
+    loading: state.loading,
     updateUser,
     refreshUser,
     logout
