@@ -347,10 +347,6 @@ export default function AllTestsPage() {
     fetchAssessments();
   }, [currentPage, itemsPerPage]);
 
-  // Debug: Log when page component mounts
-  useEffect(() => {
-    console.log("📝 All Tests page component mounted");
-  }, []);
 
   const getAccessTypeBadge = (accessType: string) => {
     return accessType === "PUBLIC" ? (

@@ -473,16 +473,16 @@ export default function QuestionBankPage() {
                 <h3 className="text-lg font-semibold text-[var(--foreground)] mb-3">Options</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {Object.entries(questionDetails.options).map(([key, value]) => (
-                    <div key={key} className={`p-3 rounded-[var(--radius)] border border-[var(--color-gray-200)] ${
+                    <div key={key} className={`p-3 rounded-[var(--radius)] border ${
                       questionDetails.correct_option === key 
-                        ? 'bg-[var(--color-green-50)] border-[var(--color-green-200)]' 
-                        : 'bg-[var(--color-secondary)]'
+                        ? 'bg-[var(--color-success)]/10 border-[var(--color-success)]/30' 
+                        : 'bg-[var(--color-secondary)] border-[var(--color-border)]'
                     }`}>
                       <div className="flex items-start gap-3">
                         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
                           questionDetails.correct_option === key
-                            ? 'bg-[var(--color-green-500)] text-white'
-                            : 'bg-[var(--color-gray-500)] text-white'
+                            ? 'bg-[var(--color-success)] text-[var(--color-success-foreground)]'
+                            : 'bg-[var(--color-muted)] text-[var(--color-secondary-foreground)]'
                         }`}>
                           {key}
                         </span>

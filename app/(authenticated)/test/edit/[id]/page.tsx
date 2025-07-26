@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Textarea from '@/components/ui/textarea';
@@ -9,8 +9,10 @@ import Select from '@/components/ui/select';
 import Toggle from '@/components/ui/toggle';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Alert from '@/components/ui/alert';
+import Skeleton from '@/components/ui/skeleton';
+import Checkbox from '@/components/ui/checkbox';
 import { authenticatedFetch } from '@/lib/auth';
-import { TOAST_DURATION, ANIMATION_DELAY, UI_SIZES } from '@/lib/constants';
+import { TOAST_DURATION, SUCCESS_REDIRECT_DELAY, ANIMATION_DELAY, UI_SIZES } from '@/lib/constants';
 
 interface FormData {
   title: string;
@@ -44,10 +46,15 @@ const initialFormData: FormData = {
   is_active: true
 };
 
-export default function CreateTestPage() {
+export default function EditTestPage() {
   const router = useRouter();
+  const params = useParams();
+  const testId = params.id as string;
+
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState({
     title: false,
     description: false,
@@ -63,6 +70,55 @@ export default function CreateTestPage() {
     variant: "info" | "success" | "warning" | "destructive", 
     message: string
   }>>([]);
+
+  // Fetch test data
+  useEffect(() => {
+    const fetchTestData = async () => {
+      try {
+        setPageLoading(true);
+        const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/assessments/${testId}/`;
+        const response = await authenticatedFetch(url);
+        
+        if (response.ok) {
+          const testData = await response.json();
+          
+          // Format datetime for input fields
+          const formatDateTimeForInput = (dateString: string) => {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+          };
+
+          setFormData({
+            title: testData.title || '',
+            description: testData.description || '',
+            assessment_type: testData.assessment_type || 'TEST',
+            access_type: testData.access_type || 'PRIVATE',
+            duration_minutes: testData.duration_minutes || 60,
+            start_time: formatDateTimeForInput(testData.start_time),
+            end_time: formatDateTimeForInput(testData.end_time),
+            shuffle_questions: testData.shuffle_questions || false,
+            shuffle_options: testData.shuffle_options || false,
+            show_results_immediately: testData.show_results_immediately || false,
+            allow_retake: testData.allow_retake || false,
+            max_attempts: testData.max_attempts || 1,
+            is_active: testData.is_active !== undefined ? testData.is_active : true
+          });
+        } else {
+          const errorData = await response.json();
+          console.error('Failed to fetch test data:', errorData);
+          setError('Failed to load test data. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error fetching test data:', error);
+        setError('Failed to load test data. Please check your connection.');
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    fetchTestData();
+  }, [testId]);
 
   const handleInputChange = (field: keyof FormData, value: string | number | boolean) => {
     setFormData(prev => ({
@@ -110,24 +166,17 @@ export default function CreateTestPage() {
     e.preventDefault();
     
     if (!validateForm()) {
-      showToast("destructive", "Please fill in all required fields.");
-      return;
-    }
-
-    // Validate that end time is after start time
-    if (new Date(formData.end_time) <= new Date(formData.start_time)) {
-      showToast("destructive", "End time must be after start time.");
+      showToast("destructive", "Please fix the errors below.");
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
       
-      console.log('Creating assessment with data:', formData);
-      
-      const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/assessments/`;
+      const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/assessments/${testId}/`;
       const response = await authenticatedFetch(url, {
-        method: 'POST',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -135,34 +184,20 @@ export default function CreateTestPage() {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        showToast("success", "Test updated successfully!");
         
-        // Navigate directly to add questions page
-        router.push(`/test/add-questions/${data.assessment.id}`);
+        // Redirect after short delay
+        setTimeout(() => {
+          router.push('/test/all-tests');
+        }, SUCCESS_REDIRECT_DELAY);
       } else {
-        try {
-          const errorData = await response.json();
-          console.error('Failed to create assessment:', errorData);
-          
-          // Extract specific error message if available
-          let errorMessage = "Failed to create assessment. Please try again.";
-          if (errorData.error) {
-            errorMessage = errorData.error;
-          } else if (errorData.message) {
-            errorMessage = errorData.message;
-          } else if (errorData.details && Array.isArray(errorData.details)) {
-            errorMessage = errorData.details.join(', ');
-          }
-          
-          showToast("destructive", errorMessage);
-        } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
-          showToast("destructive", `Failed to create assessment. Status: ${response.status}`);
-        }
+        const errorData = await response.json();
+        console.error('Failed to update test:', errorData);
+        showToast("destructive", "Failed to update test. Please try again.");
       }
     } catch (error) {
-      console.error('Error creating assessment:', error);
-      showToast("destructive", "Failed to create assessment. Please check your connection.");
+      console.error('Error updating test:', error);
+      showToast("destructive", "Failed to update test. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -190,12 +225,51 @@ export default function CreateTestPage() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  if (pageLoading) {
+    return (
+      <div className="p-6">
+        <div className="mb-6">
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-20 w-full" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <Alert variant="destructive" className="mb-6">
+          {error}
+        </Alert>
+        <Button variant="outline" onClick={() => router.back()}>
+          Go Back
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">Create New Assessment</h1>
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">Edit Assessment</h1>
         <p className="text-[var(--color-muted-foreground)] mt-1">
-          Create a new assessment for your students
+          Update assessment settings and configuration
         </p>
       </div>
 
@@ -399,21 +473,28 @@ export default function CreateTestPage() {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => setFormData(initialFormData)}
+            onClick={() => router.back()}
             disabled={loading}
           >
-            Reset Form
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="accent"
+            onClick={() => router.push(`/test/add-questions/${testId}`)}
+            disabled={loading}
+          >
+            Update Questions
           </Button>
           <Button
             type="submit"
             variant="primary"
             disabled={loading}
           >
-            {loading ? 'Creating Assessment...' : 'Add Questions'}
+            {loading ? 'Updating Assessment...' : 'Update Assessment'}
           </Button>
         </div>
       </form>
-
 
       {/* Toast Alerts - Bottom Right Stack */}
       {alerts.length > 0 && (
