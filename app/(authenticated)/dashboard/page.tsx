@@ -10,10 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 function DashboardPage() {
   const { user, loading } = useAuth();
 
-  console.log("🟢 [DASHBOARD] Component rendering, user:", user?.name, "loading:", loading);
-
   if (loading) {
-    console.log("🟢 [DASHBOARD] Still loading, showing loading state");
     return (
       <div className="p-6">
         <div className="space-y-6">
@@ -24,11 +21,8 @@ function DashboardPage() {
   }
 
   if (!user) {
-    console.log("🟢 [DASHBOARD] No user data available");
     return null;
   }
-
-  console.log("🟢 [DASHBOARD] Rendering dashboard for user:", user.name, "role:", user.role);
 
   const renderTeacherDashboard = () => (
     <div className="p-6 space-y-6">

@@ -9,6 +9,7 @@ import Badge from '@/components/ui/badge';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Alert from '@/components/ui/alert';
 import { authenticatedFetch } from '@/lib/auth';
+import { TOAST_DURATION, ANIMATION_DELAY, UI_SIZES } from '@/lib/constants';
 
 interface FormData {
   question: string;
@@ -45,7 +46,6 @@ const initialFormData: FormData = {
 };
 
 export default function CreateQuestionPage() {
-  console.log("➕ [CREATE QUESTION] Component mounting/rendering");
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,10 +109,10 @@ export default function CreateQuestionPage() {
     const id = Date.now();
     setAlerts(prev => [...prev, { id, variant, message }]);
     
-    // Auto remove after 3 seconds
+    // Auto remove after configured duration
     setTimeout(() => {
       setAlerts(prev => prev.filter(alert => alert.id !== id));
-    }, 3000);
+    }, TOAST_DURATION);
   };
 
   const removeAlert = (id: number) => {
@@ -368,8 +368,8 @@ export default function CreateQuestionPage() {
             <Alert 
               key={alert.id}
               variant={alert.variant}
-              className="min-w-[300px] max-w-[400px] shadow-lg animate-in slide-in-from-right-full duration-300"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className={`min-w-[${UI_SIZES.TOAST_MIN_WIDTH}px] max-w-[${UI_SIZES.TOAST_MAX_WIDTH}px] shadow-lg animate-in slide-in-from-right-full duration-300`}
+              style={{ animationDelay: `${index * ANIMATION_DELAY.ITEM}ms` }}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{alert.message}</span>

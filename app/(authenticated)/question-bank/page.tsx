@@ -11,6 +11,7 @@ import Skeleton from '@/components/ui/skeleton';
 import Modal, { ModalHeader, ModalTitle, ModalDescription, ModalBody, ModalFooter } from '@/components/ui/modal';
 import Spinner from '@/components/ui/spinner';
 import { authenticatedFetch } from '@/lib/auth';
+import { ERROR_DISPLAY_DURATION, PAGINATION, UI_SIZES } from '@/lib/constants';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 
 interface Question {
@@ -64,12 +65,11 @@ interface QuestionsResponse {
 }
 
 export default function QuestionBankPage() {
-  console.log("🗂️ [QUESTION BANK] Component mounting/rendering");
   const router = useRouter();
   
   // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(PAGINATION.DEFAULT_PAGE);
+  const [itemsPerPage, setItemsPerPage] = useState(PAGINATION.DEFAULT_ITEMS_PER_PAGE);
   
   // Data state
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -118,7 +118,7 @@ export default function QuestionBankPage() {
 
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
     setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1);
+    setCurrentPage(PAGINATION.DEFAULT_PAGE);
   };
 
   // Open delete confirmation modal
@@ -149,7 +149,7 @@ export default function QuestionBankPage() {
         const errorData = await response.json();
         console.error('Failed to fetch question details:', errorData);
         setError('Failed to fetch question details. Please try again.');
-        setTimeout(() => setError(null), 5000);
+        setTimeout(() => setError(null), ERROR_DISPLAY_DURATION);
       }
     } catch (error) {
       console.error('Error fetching question details:', error);
@@ -199,7 +199,7 @@ export default function QuestionBankPage() {
         setError('Failed to delete question. Please try again.');
         
         // Clear error after 5 seconds
-        setTimeout(() => setError(null), 5000);
+        setTimeout(() => setError(null), ERROR_DISPLAY_DURATION);
       }
     } catch (error) {
       console.error('Error deleting question:', error);
@@ -214,14 +214,8 @@ export default function QuestionBankPage() {
 
   // Load questions when component mounts or pagination changes
   useEffect(() => {
-    console.log("🗂️ Question Bank page mounted/updated", { currentPage, itemsPerPage });
     fetchQuestions();
   }, [currentPage, itemsPerPage]);
-
-  // Debug: Log when page component mounts
-  useEffect(() => {
-    console.log("🗂️ Question Bank page component mounted");
-  }, []);
 
   const getDifficultyBadge = (difficulty: string) => {
     switch (difficulty) {
@@ -267,7 +261,7 @@ export default function QuestionBankPage() {
             <span className="text-sm text-[var(--color-muted-foreground)]">Items per page:</span>
             <ItemsPerPage
               value={itemsPerPage}
-              options={[5, 10, 20, 50]}
+              options={PAGINATION.ITEMS_PER_PAGE_OPTIONS}
               onValueChange={handleItemsPerPageChange}
             />
           </div>
@@ -387,7 +381,7 @@ export default function QuestionBankPage() {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={handlePageChange}
-              maxVisiblePages={5}
+              maxVisiblePages={PAGINATION.MAX_VISIBLE_PAGES}
               size="md"
             />
           </div>
@@ -413,7 +407,7 @@ export default function QuestionBankPage() {
                 <p className="text-sm text-[var(--foreground)] line-clamp-5 leading-relaxed">
                   {questionToDelete.question}
                 </p>
-                {questionToDelete.question.split('\n').length > 5 || questionToDelete.question.length > 200 ? (
+                {questionToDelete.question.split('\n').length > UI_SIZES.MODAL_LINE_PREVIEW_LIMIT || questionToDelete.question.length > UI_SIZES.MODAL_TEXT_PREVIEW_LENGTH ? (
                   <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-[var(--color-card)] to-transparent pointer-events-none"></div>
                 ) : null}
               </div>
