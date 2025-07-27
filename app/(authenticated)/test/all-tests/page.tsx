@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/button";
 import IconButton from "@/components/ui/icon-button";
 import Badge from "@/components/ui/badge";
@@ -34,6 +35,7 @@ import {
   FaToggleOn,
   FaToggleOff,
   FaCheck,
+  FaPlay,
 } from "react-icons/fa";
 import Alert from "@/components/ui/alert";
 
@@ -81,6 +83,7 @@ interface AssessmentsResponse {
 export default function AllTestsPage() {
   console.log("📝 [ALL TESTS] Component mounting/rendering");
   const router = useRouter();
+  const { user } = useAuth();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -136,13 +139,13 @@ export default function AllTestsPage() {
   const copyAccessCode = async (accessCode: string) => {
     try {
       await navigator.clipboard.writeText(accessCode);
-      
+
       // Add to copied codes set
-      setCopiedCodes(prev => new Set([...prev, accessCode]));
-      
+      setCopiedCodes((prev) => new Set([...prev, accessCode]));
+
       // Remove from copied codes after 3 seconds
       setTimeout(() => {
-        setCopiedCodes(prev => {
+        setCopiedCodes((prev) => {
           const newSet = new Set(prev);
           newSet.delete(accessCode);
           return newSet;
@@ -347,7 +350,6 @@ export default function AllTestsPage() {
     fetchAssessments();
   }, [currentPage, itemsPerPage]);
 
-
   const getAccessTypeBadge = (accessType: string) => {
     return accessType === "PUBLIC" ? (
       <Badge variant="success">Public</Badge>
@@ -376,11 +378,13 @@ export default function AllTestsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[var(--foreground)]">
-          All Tests
+          {user?.role === "TEACHER" ? "All Tests" : "Available Tests"}
         </h1>
-        <Button variant="primary" onClick={() => router.push("/test/create")}>
-          Create Test
-        </Button>
+        {user?.role === "TEACHER" && (
+          <Button variant="primary" onClick={() => router.push("/test/create")}>
+            Create Test
+          </Button>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -409,11 +413,19 @@ export default function AllTestsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="max-w-0 w-full">Title</TableHead>
-              <TableHead className="w-[100px]">Access</TableHead>
-              <TableHead className="w-[120px]">Access Code</TableHead>
-              <TableHead className="w-[100px]">Status</TableHead>
-              <TableHead className="w-[100px]">Questions</TableHead>
-              <TableHead className="text-right w-[180px]">Actions</TableHead>
+              {user?.role === "TEACHER" && (
+                <TableHead className="w-[100px]">Access</TableHead>
+              )}
+              {user?.role === "TEACHER" && (
+                <TableHead className="w-[120px]">Access Code</TableHead>
+              )}
+              {user?.role === "TEACHER" && (
+                <TableHead className="w-[100px]">Status</TableHead>
+              )}
+              <TableHead className="w-[100px]">
+                {user?.role === "TEACHER" ? "Questions" : "Duration"}
+              </TableHead>
+              <TableHead className="text-right w-[120px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -424,24 +436,36 @@ export default function AllTestsPage() {
                   <TableCell className="max-w-0 w-full">
                     <Skeleton className="h-4 w-full" />
                   </TableCell>
-                  <TableCell className="w-[100px]">
-                    <Skeleton className="h-6 w-16" />
-                  </TableCell>
-                  <TableCell className="w-[120px]">
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell className="w-[100px]">
-                    <Skeleton className="h-6 w-16" />
-                  </TableCell>
+                  {user?.role === "TEACHER" && (
+                    <TableCell className="w-[100px]">
+                      <Skeleton className="h-6 w-16" />
+                    </TableCell>
+                  )}
+                  {user?.role === "TEACHER" && (
+                    <TableCell className="w-[120px]">
+                      <Skeleton className="h-4 w-20" />
+                    </TableCell>
+                  )}
+                  {user?.role === "TEACHER" && (
+                    <TableCell className="w-[100px]">
+                      <Skeleton className="h-6 w-16" />
+                    </TableCell>
+                  )}
                   <TableCell className="w-[100px]">
                     <Skeleton className="h-4 w-8" />
                   </TableCell>
-                  <TableCell className="text-right w-[180px]">
+                  <TableCell className="text-right w-[120px]">
                     <div className="flex items-center justify-end gap-1">
-                      <Skeleton className="h-8 w-8 rounded" />
-                      <Skeleton className="h-8 w-8 rounded" />
-                      <Skeleton className="h-8 w-8 rounded" />
-                      <Skeleton className="h-8 w-8 rounded" />
+                      {user?.role === "TEACHER" ? (
+                        <>
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                        </>
+                      ) : (
+                        <Skeleton className="h-8 w-20 rounded" />
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -449,10 +473,12 @@ export default function AllTestsPage() {
             ) : assessments.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={user?.role === "TEACHER" ? 6 : 3}
                   className="text-center py-8 text-[var(--color-muted-foreground)]"
                 >
-                  No assessments found.
+                  {user?.role === "TEACHER"
+                    ? "No assessments found."
+                    : "No tests available to take."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -464,102 +490,126 @@ export default function AllTestsPage() {
                   >
                     {assessment.title}
                   </TableCell>
-                  <TableCell className="w-[100px]">
-                    {getAccessTypeBadge(assessment.access_type)}
-                  </TableCell>
-                  <TableCell className="w-[120px]">
-                    {assessment.access_code ? (
-                      <Badge 
-                        variant="info"
-                        className="cursor-pointer hover:bg-[var(--color-blue-500)]/20 w-[85px] justify-center"
-                        onClick={() => copyAccessCode(assessment.access_code!)}
-                        title="Click to copy access code"
-                      >
-                        {copiedCodes.has(assessment.access_code) ? (
-                          <FaCheck className="w-3 h-3 animate-pulse" />
-                        ) : (
-                          <span className="font-[var(--font-mono)] text-[11px] tracking-[0.1em] font-medium">
-                            {assessment.access_code}
-                          </span>
-                        )}
-                      </Badge>
-                    ) : (
-                      <span className="text-sm text-[var(--color-muted-foreground)]">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="w-[100px]">
-                    {getPublishStatusBadge(assessment.is_published)}
-                  </TableCell>
+                  {user?.role === "TEACHER" && (
+                    <TableCell className="w-[100px]">
+                      {getAccessTypeBadge(assessment.access_type)}
+                    </TableCell>
+                  )}
+                  {user?.role === "TEACHER" && (
+                    <TableCell className="w-[120px]">
+                      {assessment.access_code ? (
+                        <Badge
+                          variant="info"
+                          className="cursor-pointer hover:bg-[var(--color-blue-500)]/20 w-[85px] justify-center"
+                          onClick={() =>
+                            copyAccessCode(assessment.access_code!)
+                          }
+                          title="Click to copy access code"
+                        >
+                          {copiedCodes.has(assessment.access_code) ? (
+                            <FaCheck className="w-3 h-3 animate-pulse" />
+                          ) : (
+                            <span className="font-mono text-[11px] tracking-[0.1em] font-medium">
+                              {assessment.access_code}
+                            </span>
+                          )}
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-[var(--color-muted-foreground)]">
+                          -
+                        </span>
+                      )}
+                    </TableCell>
+                  )}
+                  {user?.role === "TEACHER" && (
+                    <TableCell className="w-[100px]">
+                      {getPublishStatusBadge(assessment.is_published)}
+                    </TableCell>
+                  )}
                   <TableCell className="w-[100px]">
                     <span className="text-sm text-[var(--color-muted-foreground)]">
-                      {assessment.total_questions}
+                      {user?.role === "TEACHER"
+                        ? assessment.total_questions
+                        : "30 min"}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right w-[180px]">
+                  <TableCell className="text-right w-[120px]">
                     <div className="flex items-center justify-end gap-1">
-                      <IconButton
-                        variant="accent"
-                        size="sm"
-                        aria-label="View assessment"
-                        onClick={() => fetchAssessmentDetails(assessment.id)}
-                        disabled={loadingDetailsId === assessment.id}
-                      >
-                        {loadingDetailsId === assessment.id ? (
-                          <Spinner size="xs" color="primary" />
-                        ) : (
-                          <FaEye />
-                        )}
-                      </IconButton>
-                      <IconButton
-                        variant="warning"
-                        size="sm"
-                        aria-label="Edit assessment"
-                        onClick={() =>
-                          router.push(`/test/edit/${assessment.id}`)
-                        }
-                      >
-                        <FaEdit />
-                      </IconButton>
-                      <IconButton
-                        variant="success"
-                        size="sm"
-                        aria-label={
-                          assessment.is_published
-                            ? "Unpublish assessment"
-                            : "Publish assessment"
-                        }
-                        onClick={() => togglePublishStatus(assessment)}
-                        disabled={publishingId === assessment.id}
-                      >
-                        {publishingId === assessment.id ? (
-                          <Spinner size="xs" color="primary" />
-                        ) : assessment.is_published ? (
-                          <FaToggleOn />
-                        ) : (
-                          <FaToggleOff />
-                        )}
-                      </IconButton>
-                      {/* <IconButton
-                        variant="info"
-                        size="sm"
-                        aria-label="Clone assessment"
-                        onClick={() => console.log('Clone assessment:', assessment.id)}
-                      >
-                        <FaClone />
-                      </IconButton> */}
-                      <IconButton
-                        variant="destructive"
-                        size="sm"
-                        aria-label="Delete assessment"
-                        onClick={() => openDeleteModal(assessment)}
-                        disabled={deletingAssessmentId === assessment.id}
-                      >
-                        {deletingAssessmentId === assessment.id ? (
-                          <Spinner size="xs" color="destructive" />
-                        ) : (
-                          <FaTrash />
-                        )}
-                      </IconButton>
+                      {user?.role === "TEACHER" ? (
+                        // Teacher actions
+                        <>
+                          <IconButton
+                            variant="accent"
+                            size="sm"
+                            aria-label="View assessment"
+                            onClick={() =>
+                              fetchAssessmentDetails(assessment.id)
+                            }
+                            disabled={loadingDetailsId === assessment.id}
+                          >
+                            {loadingDetailsId === assessment.id ? (
+                              <Spinner size="xs" color="primary" />
+                            ) : (
+                              <FaEye />
+                            )}
+                          </IconButton>
+                          <IconButton
+                            variant="warning"
+                            size="sm"
+                            aria-label="Edit assessment"
+                            onClick={() =>
+                              router.push(`/test/edit/${assessment.id}`)
+                            }
+                          >
+                            <FaEdit />
+                          </IconButton>
+                          <IconButton
+                            variant="success"
+                            size="sm"
+                            aria-label={
+                              assessment.is_published
+                                ? "Unpublish assessment"
+                                : "Publish assessment"
+                            }
+                            onClick={() => togglePublishStatus(assessment)}
+                            disabled={publishingId === assessment.id}
+                          >
+                            {publishingId === assessment.id ? (
+                              <Spinner size="xs" color="primary" />
+                            ) : assessment.is_published ? (
+                              <FaToggleOn />
+                            ) : (
+                              <FaToggleOff />
+                            )}
+                          </IconButton>
+                          <IconButton
+                            variant="destructive"
+                            size="sm"
+                            aria-label="Delete assessment"
+                            onClick={() => openDeleteModal(assessment)}
+                            disabled={deletingAssessmentId === assessment.id}
+                          >
+                            {deletingAssessmentId === assessment.id ? (
+                              <Spinner size="xs" color="destructive" />
+                            ) : (
+                              <FaTrash />
+                            )}
+                          </IconButton>
+                        </>
+                      ) : (
+                        // Student action - Only "Start"
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() =>
+                            router.push(`/test/start/${assessment.id}`)
+                          }
+                          className="flex items-center gap-2"
+                        >
+                          <FaPlay className="w-3 h-3" />
+                          Start Test
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -712,22 +762,26 @@ export default function AllTestsPage() {
                         Access Code:
                       </span>
                       {assessmentDetails.access_code ? (
-                        <Badge 
+                        <Badge
                           variant="info"
                           className="cursor-pointer hover:bg-[var(--color-blue-500)]/20 w-[85px] justify-center ml-2"
-                          onClick={() => copyAccessCode(assessmentDetails.access_code)}
+                          onClick={() =>
+                            copyAccessCode(assessmentDetails.access_code)
+                          }
                           title="Click to copy access code"
                         >
                           {copiedCodes.has(assessmentDetails.access_code) ? (
                             <FaCheck className="w-3 h-3 animate-pulse" />
                           ) : (
-                            <span className="font-[var(--font-mono)] text-[11px] tracking-[0.1em] font-medium">
+                            <span className="font-mono text-[11px] tracking-[0.1em] font-medium">
                               {assessmentDetails.access_code}
                             </span>
                           )}
                         </Badge>
                       ) : (
-                        <p className="text-[var(--color-muted-foreground)]">None</p>
+                        <p className="text-[var(--color-muted-foreground)]">
+                          None
+                        </p>
                       )}
                     </div>
                   </div>

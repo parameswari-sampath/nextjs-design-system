@@ -1,0 +1,485 @@
+openapi: 3.0.3
+info:
+  title: Django Test Platform - Student API
+  description: |
+    API documentation for **Students** using the Django MCQ Test Platform.
+    
+    ## Student Features
+    - ✅ View available PUBLIC assessments
+    - ✅ Access PRIVATE assessments with access codes
+    - ✅ Take assessments and submit answers
+    - ✅ Get automatic scoring and results
+    - ✅ View personal results and performance
+    
+    ## Assessment Workflow
+    1. **Discover** → View available assessments
+    2. **Start** → Begin assessment attempt  
+    3. **Take** → Get questions and answer them
+    4. **Submit** → Submit answers for scoring
+    5. **Results** → View scores and performance
+    
+    ## Authentication
+    Use JWT Bearer token in Authorization header: `Bearer <token>`
+    
+    ## Test Account
+    - **Email**: student01@gmail.com
+    - **Password**: S@iram@123
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Authentication
+  /auth/login/:
+    post:
+      tags: [Authentication]
+      summary: Student login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: "student01@gmail.com"
+                password:
+                  type: string
+                  example: "S@iram@123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                    description: JWT token for API requests
+                  user:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                      name:
+                        type: string
+                      role:
+                        type: string
+                        example: "STUDENT"
+
+  # Assessment Discovery
+  /assessments/:
+    get:
+      tags: [Assessment Discovery]
+      summary: Browse available assessments
+      description: |
+        Get list of PUBLIC assessments available to take.
+        **Note**: Private assessments are not listed - students need access codes.
+      responses:
+        '200':
+          description: List of available PUBLIC assessments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AvailableAssessment'
+              example:
+                count: 2
+                results:
+                  - id: "123e4567-e89b-12d3-a456-426614174000"
+                    title: "Math Quiz 1"
+                    description: "Basic mathematics questions"
+                    assessment_type: "QUIZ"
+                    duration_minutes: 30
+                    total_questions: 10
+                    created_by: "Teacher Name"
+                    created_at: "2025-01-25T10:00:00Z"
+
+  # Assessment Taking Workflow
+  /assessments/{id}/start/:
+    post:
+      tags: [Take Assessment]
+      summary: "Step 1: Start assessment attempt"
+      description: |
+        Start a new assessment attempt. Required before taking any assessment.
+        - For **PUBLIC** assessments: No access code needed
+        - For **PRIVATE** assessments: Must provide valid access code
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Assessment ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                access_code:
+                  type: string
+                  description: "Required for PRIVATE assessments only"
+                  example: "KQLH4FW3"
+            examples:
+              public_assessment:
+                summary: "Public Assessment (no access code)"
+                value: {}
+              private_assessment:
+                summary: "Private Assessment (with access code)"
+                value:
+                  access_code: "KQLH4FW3"
+      responses:
+        '201':
+          description: Assessment attempt started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  attempt:
+                    $ref: '#/components/schemas/AssessmentAttempt'
+              example:
+                message: "Assessment attempt started successfully"
+                attempt:
+                  id: "a5137cde-4903-4ec7-b19f-11392f47cd3a"
+                  assessment_title: "Math Quiz 1"
+                  attempt_number: 1
+                  started_at: "2025-01-25T10:30:00Z"
+                  status: "IN_PROGRESS"
+
+  /assessments/{id}/take/:
+    get:
+      tags: [Take Assessment]
+      summary: "Step 2: Get assessment questions"
+      description: |
+        Get the questions to display during assessment taking.
+        **Must start attempt first** using `/start/` endpoint.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: access_code
+          in: query
+          schema:
+            type: string
+          description: "Required for PRIVATE assessments"
+          example: "KQLH4FW3"
+      responses:
+        '200':
+          description: Assessment questions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentQuestions'
+
+  /assessments/{id}/submit/:
+    post:
+      tags: [Take Assessment]
+      summary: "Step 3: Submit answers for scoring"
+      description: |
+        Submit student answers and get automatic results.
+        **Final step** - marks attempt as completed and calculates score.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [attempt_id, submissions]
+              properties:
+                attempt_id:
+                  type: string
+                  format: uuid
+                  description: "ID from start attempt response"
+                  example: "a5137cde-4903-4ec7-b19f-11392f47cd3a"
+                submissions:
+                  type: array
+                  description: "Student answers for each question"
+                  items:
+                    type: object
+                    required: [question_id, answer]
+                    properties:
+                      question_id:
+                        type: string
+                        format: uuid
+                      answer:
+                        type: string
+                        enum: [A, B, C, D]
+            example:
+              attempt_id: "a5137cde-4903-4ec7-b19f-11392f47cd3a"
+              submissions:
+                - question_id: "q1-uuid-here"
+                  answer: "C"
+                - question_id: "q2-uuid-here"
+                  answer: "A"
+                - question_id: "q3-uuid-here"
+                  answer: "B"
+      responses:
+        '201':
+          description: Assessment submitted successfully with automatic results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  result:
+                    $ref: '#/components/schemas/AssessmentResult'
+
+  # Results and Performance
+  /results/:
+    get:
+      tags: [Results]
+      summary: View my assessment results
+      description: Get list of all assessment results for the current student
+      responses:
+        '200':
+          description: List of student's assessment results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AssessmentResult'
+              example:
+                count: 1
+                results:
+                  - id: "result-uuid"
+                    assessment_title: "Math Quiz 1"
+                    total_questions: 4
+                    correct_answers: 2
+                    wrong_answers: 2
+                    marks_obtained: 10.0
+                    total_marks: 20.0
+                    percentage: 50.0
+                    grade: "C+"
+                    is_passed: true
+                    time_taken: "00:05:30"
+                    created_at: "2025-01-25T10:35:00Z"
+
+  /results/{id}/:
+    get:
+      tags: [Results]
+      summary: Get detailed result
+      description: |
+        Get detailed result including:
+        - Overall performance metrics
+        - Individual question answers
+        - Correct/incorrect breakdown
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detailed assessment result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/AssessmentResult'
+                  - type: object
+                    properties:
+                      submissions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            question_title:
+                              type: string
+                            selected_answer:
+                              type: string
+                            is_correct:
+                              type: boolean
+                            marks_obtained:
+                              type: number
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AvailableAssessment:
+      type: object
+      description: "Public assessments available to students"
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        assessment_type:
+          type: string
+          enum: [PRACTICE, EXAM, QUIZ]
+        duration_minutes:
+          type: integer
+        total_questions:
+          type: integer
+        created_by:
+          type: string
+          description: "Teacher name"
+        created_at:
+          type: string
+          format: date-time
+
+    AssessmentAttempt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Use this ID when submitting answers"
+        assessment:
+          type: string
+          format: uuid
+        assessment_title:
+          type: string
+        attempt_number:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [IN_PROGRESS, SUBMITTED, ABANDONED, TIME_EXPIRED]
+
+    AssessmentQuestions:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        duration_minutes:
+          type: integer
+        questions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                description: "Use this ID when submitting answer"
+              question:
+                type: string
+              options:
+                type: object
+                properties:
+                  A:
+                    type: string
+                  B:
+                    type: string
+                  C:
+                    type: string
+                  D:
+                    type: string
+              order:
+                type: integer
+              marks:
+                type: number
+
+    AssessmentResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        assessment_title:
+          type: string
+        student_name:
+          type: string
+        total_questions:
+          type: integer
+        questions_attempted:
+          type: integer
+        correct_answers:
+          type: integer
+        wrong_answers:
+          type: integer
+        total_marks:
+          type: number
+        marks_obtained:
+          type: number
+        percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        grade:
+          type: string
+          enum: [A+, A, B+, B, C+, C, F]
+          description: |
+            Grade scale:
+            - A+: 90-100%
+            - A: 80-89%
+            - B+: 70-79%
+            - B: 60-69%
+            - C+: 50-59%
+            - C: 40-49%
+            - F: Below 40%
+        time_taken:
+          type: string
+          description: "Actual time taken (HH:MM:SS)"
+        is_passed:
+          type: boolean
+          description: "true if percentage >= 40%"
+        created_at:
+          type: string
+          format: date-time
+
+tags:
+  - name: Authentication
+    description: Student login
+  - name: Assessment Discovery
+    description: Find available assessments to take
+  - name: Take Assessment
+    description: Complete assessment workflow (start → take → submit)
+  - name: Results
+    description: View assessment results and performance

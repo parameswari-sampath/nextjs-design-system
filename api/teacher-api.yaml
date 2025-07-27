@@ -1,0 +1,452 @@
+openapi: 3.0.3
+info:
+  title: Django Test Platform - Teacher API
+  description: |
+    API documentation for **Teachers** using the Django MCQ Test Platform.
+    
+    ## Teacher Features
+    - ✅ Create and manage questions
+    - ✅ Create and manage assessments  
+    - ✅ Publish assessments for students
+    - ✅ View dashboard analytics
+    - ✅ Access only own content (RBAC security)
+    
+    ## Authentication
+    Use JWT Bearer token in Authorization header: `Bearer <token>`
+    
+    ## Test Account
+    - **Email**: teacher01@gmail.com
+    - **Password**: S@iram@123
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Authentication
+  /auth/login/:
+    post:
+      tags: [Authentication]
+      summary: Teacher login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: "teacher01@gmail.com"
+                password:
+                  type: string
+                  example: "S@iram@123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                    description: JWT token for API requests
+                  user:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                      name:
+                        type: string
+                      role:
+                        type: string
+                        example: "TEACHER"
+
+  # Questions Management
+  /questions/:
+    get:
+      tags: [Questions]
+      summary: List my questions
+      description: Get all questions created by the current teacher
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search in question text and options
+        - name: difficulty_level
+          in: query
+          schema:
+            type: string
+            enum: [EASY, MEDIUM, HARD]
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of teacher's questions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Question'
+
+    post:
+      tags: [Questions]
+      summary: Create new question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question, option_a, option_b, option_c, option_d, correct_option]
+              properties:
+                question:
+                  type: string
+                  example: "What is the capital of France?"
+                option_a:
+                  type: string
+                  example: "London"
+                option_b:
+                  type: string
+                  example: "Berlin"
+                option_c:
+                  type: string
+                  example: "Paris"
+                option_d:
+                  type: string
+                  example: "Madrid"
+                correct_option:
+                  type: string
+                  enum: [A, B, C, D]
+                  example: "C"
+                difficulty_level:
+                  type: string
+                  enum: [EASY, MEDIUM, HARD]
+                  example: "MEDIUM"
+                subject:
+                  type: string
+                  example: "Geography"
+      responses:
+        '201':
+          description: Question created successfully
+
+  /questions/{id}/:
+    get:
+      tags: [Questions]
+      summary: Get question details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Question details
+
+    put:
+      tags: [Questions]
+      summary: Update question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionUpdate'
+      responses:
+        '200':
+          description: Question updated successfully
+
+    delete:
+      tags: [Questions]
+      summary: Delete question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Question deleted successfully
+
+  # Assessment Management
+  /assessments/:
+    get:
+      tags: [Assessments]
+      summary: List my assessments
+      description: Get all assessments created by the current teacher
+      responses:
+        '200':
+          description: List of teacher's assessments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Assessment'
+
+    post:
+      tags: [Assessments]
+      summary: Create new assessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, assessment_type, access_type, duration_minutes]
+              properties:
+                title:
+                  type: string
+                  example: "Math Quiz 1"
+                description:
+                  type: string
+                  example: "Basic mathematics questions"
+                assessment_type:
+                  type: string
+                  enum: [PRACTICE, EXAM, QUIZ]
+                  example: "QUIZ"
+                access_type:
+                  type: string
+                  enum: [PUBLIC, PRIVATE]
+                  example: "PUBLIC"
+                duration_minutes:
+                  type: integer
+                  example: 30
+                max_attempts:
+                  type: integer
+                  example: 3
+      responses:
+        '201':
+          description: Assessment created successfully
+
+  /assessments/{id}/:
+    get:
+      tags: [Assessments]
+      summary: Get assessment details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Assessment details
+
+  /assessments/{id}/questions/:
+    post:
+      tags: [Assessment Questions]
+      summary: Add question to assessment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question_id, marks, order]
+              properties:
+                question_id:
+                  type: string
+                  format: uuid
+                marks:
+                  type: number
+                  example: 2
+                order:
+                  type: integer
+                  example: 1
+                is_required:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Question added to assessment
+
+  /assessments/{id}/publish/:
+    post:
+      tags: [Assessment Actions]
+      summary: Publish assessment
+      description: Make assessment available to students
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Assessment published successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Assessment published successfully"
+
+  /assessments/{id}/unpublish/:
+    post:
+      tags: [Assessment Actions]
+      summary: Unpublish assessment
+      description: Make assessment unavailable to students
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Assessment unpublished successfully
+
+  # Dashboard
+  /dashboard/:
+    get:
+      tags: [Dashboard]
+      summary: Get teacher dashboard
+      description: Statistics and analytics for teacher
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_questions:
+                    type: integer
+                  total_assessments:
+                    type: integer
+                  published_assessments:
+                    type: integer
+                  recent_activities:
+                    type: array
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        question:
+          type: string
+        difficulty_level:
+          type: string
+          enum: [EASY, MEDIUM, HARD]
+        subject:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    QuestionUpdate:
+      type: object
+      properties:
+        question:
+          type: string
+        option_a:
+          type: string
+        option_b:
+          type: string
+        option_c:
+          type: string
+        option_d:
+          type: string
+        correct_option:
+          type: string
+          enum: [A, B, C, D]
+        difficulty_level:
+          type: string
+          enum: [EASY, MEDIUM, HARD]
+        subject:
+          type: string
+        is_active:
+          type: boolean
+
+    Assessment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        access_type:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        access_code:
+          type: string
+          nullable: true
+          description: "Auto-generated for PRIVATE assessments"
+        is_published:
+          type: boolean
+        is_active:
+          type: boolean
+        total_questions:
+          type: integer
+
+tags:
+  - name: Authentication
+    description: Teacher login and logout
+  - name: Questions
+    description: Create and manage questions
+  - name: Assessments
+    description: Create and manage assessments
+  - name: Assessment Questions
+    description: Add/remove questions from assessments
+  - name: Assessment Actions
+    description: Publish/unpublish assessments
+  - name: Dashboard
+    description: Teacher statistics and analytics

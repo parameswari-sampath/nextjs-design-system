@@ -351,6 +351,21 @@ function AuthenticatedLayoutInner({
   const menuItems = getMenuItems(user.role);
   // console.log("🔍 [AUTH LAYOUT] Rendering main layout for user:", user.name, "role:", user.role, "pathname:", pathname);
 
+  // Check if current route is test taking or test start - hide sidebar/navbar
+  const isTestTakingRoute = pathname.startsWith('/test/take') || pathname.startsWith('/test/start');
+
+  // If test taking route, render only the content
+  if (isTestTakingRoute) {
+    return (
+      <div className="h-screen bg-[var(--background)]">
+        {(() => {
+          // console.log("🎯 [TEST LAYOUT] Rendering test taking page for pathname:", pathname);
+          return children;
+        })()}
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-[var(--background)]">
       {/* Mobile Header */}
